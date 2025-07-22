@@ -18,12 +18,10 @@ while True:
     results = model(frame)
     annotated_frame = results[0].plot()
 
-    # Calcul FPS à partir du temps d'inférence
-    inference_time = results[0].speed["inference"]  # en millisecondes
+    inference_time = results[0].speed["inference"] 
     fps = 1000 / inference_time if inference_time else 0
     text = f"FPS: {fps:.1f}"
 
-    # Afficher le texte dans le coin supérieur droit
     font = cv2.FONT_HERSHEY_SIMPLEX
     text_size = cv2.getTextSize(text, font, 1, 2)[0]
     text_x = annotated_frame.shape[1] - text_size[0] - 10
@@ -35,6 +33,5 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
-# Libération des ressources
 cap.release()
 cv2.destroyAllWindows()
