@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 
-# Load a YOLOv8n PyTorch model
+# Load a YOLO
 model = YOLO("yolo11n.pt")
 
 # Export the model to NCNN format
