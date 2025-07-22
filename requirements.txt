@@ -1,1 +1,2 @@
-ultralytics[export]
+ultralytics
+opencv-python
