@@ -1,63 +1,56 @@
 from ultralytics import YOLO
 import cv2
-import math 
+import math
+from test_angle_correction import angles_correction
 
-# model
-model = YOLO("yolo11x.pt")
 
-# start webcam
-cap = cv2.VideoCapture(0)
-cap.set(3, 640)
-cap.set(4, 480)
+model = YOLO("../yolov8s-worldv2.pt")
 
-# object classes
-classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-              "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-              "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
-              "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat",
-              "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
-              "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-              "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed",
-              "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", "keyboard", "cell phone",
-              "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
-              "teddy bear", "hair drier", "toothbrush"
-              ]
+custom_classes = ["pen"]
+model.set_classes(custom_classes)
 
+cap_resolution = (1280, 720)
+camera_fov_x = 78
+camera_fov = (camera_fov_x, camera_fov_x * cap_resolution[1] / cap_resolution[0])
+
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+cap.set(3, cap_resolution[0])
+cap.set(4, cap_resolution[1])   
 
 while True:
     success, img = cap.read()
+    if not success:
+        break
+
     results = model(img, stream=True)
 
-    # coordinates
     for r in results:
         boxes = r.boxes
+        names = r.names
+        probs = r.probs
 
         for box in boxes:
-            # bounding box
             x1, y1, x2, y2 = box.xyxy[0]
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2) # convert to int values
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
-            # put box in cam
+            xc = int((x2 - x1) / 2 + x1)
+            yc = int((y2 - y1) / 2 + y1)
+            obj_center_coords = (xc, yc)
+
+            motor_angles_correction  = angles_correction(obj_center_coords, cap_resolution, camera_fov)
+
+            confidence = round(float(box.conf[0]), 2)
+            cls_id = int(box.cls[0])
+            cls_name = custom_classes[cls_id] if cls_id < len(custom_classes) else "N/A"
+
+            print(f"Class: {cls_name} | Confidence: {confidence} | Coordinates: {x1, y1, x2, y2} | Center: {obj_center_coords} | Angle Correction: X: {motor_angles_correction[0]} Y: {motor_angles_correction[1]}")
+
             cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+            cv2.circle(img, obj_center_coords, 5, (0, 0, 255), -1)
+            cv2.putText(img, f"{cls_name} {confidence}", (x1, y1 - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
 
-            # confidence
-            confidence = math.ceil((box.conf[0]*100))/100
-            print("Confidence --->",confidence)
-
-            # class name
-            cls = int(box.cls[0])
-            print("Class name -->", classNames[cls])
-
-            # object details
-            org = [x1, y1]
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            fontScale = 1
-            color = (255, 0, 0)
-            thickness = 2
-
-            cv2.putText(img, classNames[cls], org, font, fontScale, color, thickness)
-
-    cv2.imshow('Webcam', img)
+    cv2.imshow('YOLO-World Webcam', img)
     if cv2.waitKey(1) == ord('q'):
         break
 

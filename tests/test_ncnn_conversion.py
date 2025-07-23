@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 
 # Load a YOLO
-model = YOLO("yolo11n.pt")
+model = YOLO("yolov8s-worldv2.pt")
 
 # Export the model to NCNN format
-model.export(format="ncnn", imgsz=640) 
+model.export(format="onnx", imgsz=640) 
