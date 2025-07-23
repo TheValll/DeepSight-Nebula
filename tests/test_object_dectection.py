@@ -1,12 +1,13 @@
 from ultralytics import YOLO
 import cv2
 import math
+import time
 from test_angle_correction import angles_correction
+from test_arduino_servo_commands import arduino_connect, arduino_disconnect, arduino_send_command
 
+model = YOLO("../yolov8l-worldv2.pt")
 
-model = YOLO("../yolov8s-worldv2.pt")
-
-custom_classes = ["pen"]
+custom_classes = ["cup3"]
 model.set_classes(custom_classes)
 
 cap_resolution = (1280, 720)
@@ -17,11 +18,24 @@ cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(3, cap_resolution[0])
 cap.set(4, cap_resolution[1])   
 
+arduino_connect()
+
+fps_target = 60
+frame_time = 1 / fps_target
+prev_time = time.time()
+
 while True:
+    current_time = time.time()
+    elapsed = current_time - prev_time
+    if elapsed < frame_time:
+        time.sleep(frame_time - elapsed)
+    prev_time = time.time()
+
     success, img = cap.read()
     if not success:
         break
-
+    
+    img = cv2.flip(img, 1) 
     results = model(img, stream=True)
 
     for r in results:
@@ -38,6 +52,7 @@ while True:
             obj_center_coords = (xc, yc)
 
             motor_angles_correction  = angles_correction(obj_center_coords, cap_resolution, camera_fov)
+            arduino_send_command(motor_angles_correction)
 
             confidence = round(float(box.conf[0]), 2)
             cls_id = int(box.cls[0])
@@ -56,3 +71,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+arduino_disconnect()
