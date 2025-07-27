@@ -6,9 +6,9 @@ from ultralytics import YOLO
 
 class Detection:
     def __init__(self):
-        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.device = 0 if torch.cuda.is_available() else 1
         print(f"Use : {self.device}")
-        self.model = YOLO("yolov8x.pt").to(self.device)
+        self.model = YOLO("yolov8x.engine")
         self.camera = 0
         self.camera_resolution = (640, 480)
         self.camera_refresh_rate = 60
