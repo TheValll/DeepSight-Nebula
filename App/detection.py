@@ -16,8 +16,8 @@ class Detection:
         self.classes = [32]
         self.latest_frame = None
         self.lock = threading.Lock()
-        self.capturing = True     # Contrôle la capture vidéo
-        self.predicting = True    # Contrôle la boucle de prédiction
+        self.capturing = True   
+        self.predicting = True   
         self.cap = cv2.VideoCapture(self.camera, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.camera_resolution[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.camera_resolution[1])
