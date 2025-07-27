@@ -1,3 +1,4 @@
-yolov8s-worldv2.pt
-yolov8s-worldv2.onnx
-yolov8l-worldv2.pt
+yolov8n.pt
+yolov8x.pt
+.vs
+__pycache__
