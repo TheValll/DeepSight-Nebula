@@ -1,4 +1,8 @@
 yolov8n.pt
 yolov8x.pt
+yolov8x.engine
 .vs
 __pycache__
+log
+build
+install
