@@ -1,0 +1,6 @@
+float32 x_object
+float32 y_object
+---
+float32 x_correction
+float32 y_correction
+bool success
