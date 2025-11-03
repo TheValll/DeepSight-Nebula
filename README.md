@@ -134,3 +134,75 @@ Voici le schéma de la représentation de cette première étape que j’ai en t
 ![Schéma étape 1](schemas/schema1.png)
 
 ---
+
+### 🗓️ 03/11/2025
+
+Cela fait 4 mois que je n'ai pas rédigé de récapitulatif sur ce document, principalement par manque de temps et en raison d'une phase d'apprentissage intense.
+
+---
+
+### 🛠️ Apprentissage & Développement
+
+Ces derniers mois ont été consacrés à l'acquisition de nouvelles compétences et au premier développement sur le robot.
+
+- **Formation ROS2** : J'ai commencé à me former à **ROS2** en suivant ce [tutoriel YouTube](https://www.youtube.com/watch?v=Gg25GfA456o&t). J'ai pu appréhender les concepts de _nodes_, _publisher_, _subscriber_, _client_, _server_ et _actions_.
+- **Contrôle du Robot** : Le bras **xArm ESP32** n'ayant pas de logiciel constructeur facilitant le développement, j'ai dû apprendre à récupérer les informations transitant via les ports USB.
+  - À l'aide du logiciel **COM8 Monitoring Session**, j'ai pu analyser les commandes envoyées par le logiciel basique du robot.
+  - J'ai ainsi pu comprendre quelles commandes envoyer pour le piloter. Vous trouverez ce développement dans le fichier `Utils/xarm_esp32_init.py` qui gère les actions de base.
+- **Mathématiques & IA** : Je suis actuellement des cours de mathématiques sur Coursera ([Mathematics for Machine Learning and Data Science de DeepLearning.AI](https://www.coursera.org/specializations/mathematics-machine-learning-data-science)). Étant en master Data & IA, ces cours me seront essentiels, notamment pour mon objectif à long terme de créer mon propre modèle d'IA.
+
+---
+
+### 🏗️ Architecture & Conception
+
+Mes réflexions sur l'architecture matérielle et logicielle ont beaucoup évolué.
+
+- **Schéma d'architecture ROS** : J'ai réalisé un premier schéma de mon architecture ROS. Ce n'est qu'une base et absolument pas une solution finale.
+  ![Schéma architecture](schemas/schema2.png)
+- **Abandon du Lidar** : J'ai pris la décision de ne plus utiliser de capteur Lidar (comme le TF-Luna).
+  - La raison principale est que la caméra stéréo sera suffisante pour générer une **DepthMap** (carte de profondeur) via OpenCV.
+  - De plus, le Lidar nécessitait un alignement très précis (angle < 2°) entre la caméra, la pince et l'objet.
+  - Mes premiers tests ont montré que le robot n'est pas assez précis ou robuste pour cela. Le poids, la latence et la précision des servos provoquaient des oscillations (va-et-vient) lors de la tentative de calibrage, sans jamais y parvenir. Je vais donc me concentrer uniquement sur la caméra stéréo.
+- **Positionnement de la caméra** : Je prévois d'installer la caméra stéréo juste en dessous de la pince, fixée sur le servo qui contrôle cette dernière.
+  ![Schéma positionnement camera](schemas/schema3.png)
+
+---
+
+### 💰 Matériel & Budget
+
+Le budget estimé est respecté avec les achats suivants :
+
+| Équipement                | Prix      | Lien                                                                            |
+| ------------------------- | --------- | ------------------------------------------------------------------------------- |
+| Bras robotique xArm ESP32 | 229.99€   | [Hiwonder](https://www.hiwonder.com/products/xarm-esp32?variant=39662930067543) |
+| Caméra USB stéréo ELP     | 125€      | [Amazon](https://www.amazon.fr/dp/B07FT2GKZS)                                   |
+| Raspberry Pi              | À acheter |                                                                                 |
+| **Total (actuel)**        | **~355€** |                                                                                 |
+
+Ces achats rentrent bien dans le budget estimé de 400€ que j'avais mentionné précédemment.
+
+---
+
+### 🗺️ Grandes Lignes & Objectifs (Mise à jour)
+
+Avec ces nouveaux éléments, les grandes lignes du projet se précisent :
+
+1.  **Objectif** : Attraper un objet (une balle de tennis pour commencer) de manière autonome.
+2.  **IA (Vision)** : J'utiliserai **YOLOv8** (pour ses performances) pour la détection d'objet.
+3.  **Vision (Profondeur)** : La **caméra stéréo** et **OpenCV** me permettront de générer une DepthMap et d'obtenir les **coordonnées 3D** de l'objet.
+4.  **Mouvement** : J'apprendrai à utiliser les fichiers **URDF** (pour modéliser le robot) et la bibliothèque **MoveIt** (pour planifier la trajectoire) afin de déterminer le chemin optimal pour saisir l'objet.
+5.  **Futur** : À terme, je souhaite créer mon propre modèle d'IA, potentiellement basé sur de l'**apprentissage par renforcement** (soit sur la reconnaissance de l'objet, soit sur la réussite de la saisie complète).
+
+---
+
+### 🔜 Prochaines étapes
+
+Maintenant que les idées et les technologies sont plus claires :
+
+- Attendre la livraison de ma caméra stéréo.
+- Continuer à me former sur ROS2, notamment sur les **fichiers URDF** et **MoveIt** (via la même chaîne YouTube).
+- Apprendre la modélisation 3D ou l'impression 3D pour créer un support de caméra adapté.
+  - Je vais me rapprocher de l'association d'innovation de mon école qui propose des formations.
+  - Alternativement, j'adapterai un modèle 3D existant, comme [celui-ci](https://makerworld.com/en/models/27135-raspberry-camera-mount?from=search), et je contacterai son créateur pour voir s'il est compatible.
+- Refaire un schéma de l'architecture globale du projet plus détaillé.
+- Essayer de contacter Edouard Renard (instructeur en robotique) pour lui demander un avis sur mon architecture et mes idées avant de développer.
