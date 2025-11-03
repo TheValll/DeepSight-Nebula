@@ -3,16 +3,20 @@
 <package format="3">
   <name>camera_package</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Camera capture and YOLO detection node</description>
   <maintainer email="Valentin@todo.todo">Valentin</maintainer>
-  <license>TODO: License declaration</license>
+  <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
-  <depend>get_analysed_frame</depend>
-  <depend>cv2</depend>
-  <depend>threading</depend>
   <depend>cv_bridge</depend>
+  <depend>sensor_msgs</depend>
   <depend>time</depend>
+  <depend>get_angle_correction_package</depend>
+  <depend>xarm_esp32_interfaces</depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>ultralytics</exec_depend>
+  <exec_depend>onnxruntime</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -1,8 +1,0 @@
-# Request
-sensor_msgs/Image image
----
-# Response
-sensor_msgs/Image analysed_image
-float32 x
-float32 y
-bool success

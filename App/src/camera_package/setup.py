@@ -23,4 +23,8 @@ setup(
             "capture_frame = camera_package.capture_frame_node:main"
         ],
     },
+    package_data={
+        'camera_package': ['yolov8s.onnx']
+    },
+    include_package_data=True,
 )
