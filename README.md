@@ -206,3 +206,49 @@ Maintenant que les idées et les technologies sont plus claires :
   - Alternativement, j'adapterai un modèle 3D existant, comme [celui-ci](https://makerworld.com/en/models/27135-raspberry-camera-mount?from=search), et je contacterai son créateur pour voir s'il est compatible.
 - Refaire un schéma de l'architecture globale du projet plus détaillé.
 - Essayer de contacter Edouard Renard (instructeur en robotique) pour lui demander un avis sur mon architecture et mes idées avant de développer.
+
+---
+
+### 🗓️ 08/11/2025
+
+L'avancement continue, avec des progrès notables sur la partie vision et la modélisation du robot.
+
+---
+
+### 🛠️ Développement & Vision
+
+- **Caméra Stéréo** : J'ai bien reçu ma caméra stéréo ELP.
+- **Script de test** : J'ai pu écrire un premier script `utils/stereo_camera.py` qui me permet d'initialiser la caméra et d'afficher les flux vidéo des deux camérras.
+
+---
+
+### 🏗️ Architecture (Mise à jour)
+
+J'ai simplifié mon architecture principale pour la rendre plus réalisable pour une première version.
+
+- **Nouvelle architecture** :
+  ![Schéma architecture](schemas/schema4.png)
+- **Limites actuelles** : Dans cette configuration, le robot est incapable de faire du temps réel. Il devra attendre que l'objet à ramasser soit immobile et qu'il le reste pendant toute la durée du déplacement.
+- **Objectif V1** : Je vais m'en tenir à cette approche pour la première version du projet. La correction de trajectoire en temps réel sera une amélioration pour le futur.
+
+---
+
+### 🦾 Modélisation & URDF
+
+La création du jumeau numérique du robot dans ROS2 a été une étape majeure et complexe.
+
+- **Fichier URDF** : J'ai appris à écrire un fichier `.xacro` et à construire un package ROS2.
+- **Modèle 3D** : L'entreprise Hiwonder m'a fourni le fichier `.stp` de mon robot, que j'ai ouvert via **Fusion360**.
+- **Assemblage** : J'ai dû trier et assembler les 309 pièces de base en "components" logiques (pince, base, limb1, etc.) et créer les joints entre eux.
+- **Difficulté majeure** : Le script d'export par défaut ([fusion2urdf](https://github.com/syuntoku14/fusion2urdf/tree/master)) n'accepte pas les joints "as-built" de Fusion. Or, je ne pouvais pas utiliser de joints simples, car les pièces étaient déjà assemblées dans le fichier `.stp` de base.
+- **Solution** : Après 3 jours de recherches, j'ai trouvé une [issue GitHub](https://github.com/syuntoku14/fusion2urdf/issues/78) décrivant le même problème.
+  - Un grand merci à **Colin Fuelberth** ([@Infinite-Echo](https://github.com/Infinite-Echo)) qui a forké et adapté le script pour supporter les joints "as-built" !
+  - **Script utilisé** : [Infinite-Echo/ROS2_fusion2URDF](https://github.com/Infinite-Echo/ROS2_fusion2URDF/tree/URDF_Exporter_asBuilt_Support)
+- **Résultat** : J'ai enfin pu exporter un package ROS2 complet avec un fichier `.xacro` qui décrit mon bras robot.
+
+---
+
+### 🔜 Prochaines étapes
+
+- Je suis actuellement un tutoriel **Blender** qui me permettra à l'avenir de modéliser et d'imprimer en 3D mon propre support de caméra.
+- **Passer via Docker ou Linux** (avec un dual boot) pour ROS2. Je suis beaucoup trop limité avec mon Windows qui ne me facilite pas la tâche, surtout pour ouvrir et visualiser mon `.xacro`.
