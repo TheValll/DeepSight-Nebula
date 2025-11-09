@@ -7,7 +7,7 @@
 ## 🌌 Pourquoi le nom _DeepSight-Nebula_ ?
 
 - 🔍 _DeepSight_ : fait référence à la **profondeur**, en écho au système de vision de ce projet.
-- 🌠 _Nebula_ : en hommage aux **nébuleuses** objets céleste afin de refléter ma passion pour l’espace.
+- 🌠 _Nebula_ : référence aux **nébuleuses** objets céleste afin de refléter ma passion pour l’espace.
 
 ---
 
@@ -40,7 +40,7 @@ J’y consignerai :
 - Des solutions aux problèmes rencontrés 🧩
 - … et peut-être même des questions que je me poserai en chemin 🤔
 
-Je m’appuierai sur **ChatGPT** pour m’aider à rédiger, reformuler et améliorer ce document tout au long du projet.
+Je m’appuierai sur **ChatGPT** pour m’aider à reformuler et améliorer ce document tout au long du projet.
 
 ---
 
@@ -67,7 +67,7 @@ Comme je souhaite utiliser un **Raspberry Pi** (qui me servira aussi pour d’au
 
 👉 Je n’ai pas encore pris la décision de les acheter mais cela me donne une idée de la faisabilité et du budget.
 
-👉 Je n'ai également pas choisi l'Intel RealSense car ses dimensions sont trop grandes pour être fixées sur un bras robot.
+👉 Je n'ai également pas choisi l'Intel RealSense (caméra stéréo la plus connue) car ses dimensions sont trop grandes pour être fixées sur un bras robot.
 
 ---
 
@@ -145,6 +145,8 @@ Cela fait 4 mois que je n'ai pas rédigé de récapitulatif sur ce document, pri
 
 Ces derniers mois ont été consacrés à l'acquisition de nouvelles compétences et au premier développement sur le robot.
 
+- J'ai fait l'achat du bras robot xArm Esp32 de chez [Hiwonder](https://www.hiwonder.com/products/xarm-esp32?variant=39662930067543)
+
 - **Formation ROS2** : J'ai commencé à me former à **ROS2** en suivant ce [tutoriel YouTube](https://www.youtube.com/watch?v=Gg25GfA456o&t). J'ai pu appréhender les concepts de _nodes_, _publisher_, _subscriber_, _client_, _server_ et _actions_.
 - **Contrôle du Robot** : Le bras **xArm ESP32** n'ayant pas de logiciel constructeur facilitant le développement, j'ai dû apprendre à récupérer les informations transitant via les ports USB.
   - À l'aide du logiciel **COM8 Monitoring Session**, j'ai pu analyser les commandes envoyées par le logiciel basique du robot.
@@ -157,9 +159,9 @@ Ces derniers mois ont été consacrés à l'acquisition de nouvelles compétence
 
 Mes réflexions sur l'architecture matérielle et logicielle ont beaucoup évolué.
 
-- **Schéma d'architecture ROS** : J'ai réalisé un premier schéma de mon architecture ROS. Ce n'est qu'une base et absolument pas une solution finale.
+- **Schéma d'architecture ROS** : J'avais réalisé un premier schéma de mon architecture ROS. Ce n'était qu'une base et absolument pas une solution finale.
   ![Schéma architecture](schemas/schema2.png)
-- **Abandon du Lidar** : J'ai pris la décision de ne plus utiliser de capteur Lidar (comme le TF-Luna).
+- **Abandon du Lidar** : Entre temps j'ai pris la décision de ne plus utiliser de capteur Lidar (comme le TF-Luna).
   - La raison principale est que la caméra stéréo sera suffisante pour générer une **DepthMap** (carte de profondeur) via OpenCV.
   - De plus, le Lidar nécessitait un alignement très précis (angle < 2°) entre la caméra, la pince et l'objet.
   - Mes premiers tests ont montré que le robot n'est pas assez précis ou robuste pour cela. Le poids, la latence et la précision des servos provoquaient des oscillations (va-et-vient) lors de la tentative de calibrage, sans jamais y parvenir. Je vais donc me concentrer uniquement sur la caméra stéréo.
@@ -211,7 +213,7 @@ Maintenant que les idées et les technologies sont plus claires :
 
 ### 🗓️ 08/11/2025
 
-L'avancement continue, avec des progrès notables sur la partie vision et la modélisation du robot.
+L'avancement continue, avec des progrès sur la partie vision et la modélisation du robot.
 
 ---
 
@@ -244,7 +246,7 @@ La création du jumeau numérique du robot dans ROS2 a été une étape majeure 
 - **Solution** : Après 3 jours de recherches, j'ai trouvé une [issue GitHub](https://github.com/syuntoku14/fusion2urdf/issues/78) décrivant le même problème.
   - Un grand merci à **Colin Fuelberth** ([@Infinite-Echo](https://github.com/Infinite-Echo)) qui a forké et adapté le script pour supporter les joints "as-built" !
   - **Script utilisé** : [Infinite-Echo/ROS2_fusion2URDF](https://github.com/Infinite-Echo/ROS2_fusion2URDF/tree/URDF_Exporter_asBuilt_Support)
-- **Résultat** : J'ai enfin pu exporter un package ROS2 complet avec un fichier `.xacro` qui décrit mon bras robot.
+- **Résultat** : J'ai enfin pu exporter un package ROS2 complet avec un fichier `.xacro` qui décrit mon bras robot qui se trouve dans le dossier `modelisations/robot/xArm32_description`. Ce URDF ne prend pas en compte la fermeture et l'ouverture de la pince. Je l'adapterai au moment venu, l'objectif premier était d'avoir les bases et d'apprendre le logiciel Fusion.
 
 ---
 
