@@ -271,6 +271,8 @@ Je ne pense pas me servir de Gazebo dans ce projet.
 
 ![RViz résultat](schemas/schema5.gif)
 
+---
+
 ### 🔜 Prochaines étapes
 
 - Je suis actuellement un tutoriel **Blender** qui me permettra à l'avenir de modéliser et d'imprimer en 3D mon propre support de caméra.
