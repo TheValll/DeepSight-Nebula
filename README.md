@@ -1,5 +1,314 @@
 # 🤖✨ DeepSight-Nebula
 
+---
+
+## 📑 Table of Contents / Sommaire
+
+### 🇬🇧 English Version
+
+- [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula)
+- [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula)
+- [Purpose of this README](#-purpose-of-this-readme)
+- [Logbook (English)](#-logbook)
+
+### 🇫🇷 Version Française
+
+- [Pourquoi le nom _DeepSight-Nebula_ ?](#-pourquoi-le-nom-deepsight-nebula-)
+- [Objectifs de DeepSight-Nebula](#-objectifs-de-deepsight-nebula)
+- [Objectif de ce README](#-objectif-de-ce-readme)
+- [Journal de bord](#-journal-de-bord)
+
+---
+
+## 🇬🇧 English Version
+
+**DeepSight-Nebula is a project combining Robotics & Artificial Intelligence.**
+
+---
+
+## 🌌 Why the name _DeepSight-Nebula_?
+
+- 🔍 _DeepSight_: refers to **depth**, reflecting the project's vision system.
+- 🌠 _Nebula_: refers to **nebulas**, celestial objects, to reflect my passion for space.
+
+---
+
+## 🎯 Goals of DeepSight-Nebula
+
+The project has several goals:
+
+- 🚀 To improve my skills in **robotics** and **AI** in general.
+- 📚 To serve as a basis for a **master's thesis** in _Big Data & AI_, and possibly prepare for a **PhD in Robotics & AI**.
+- 🦾 To design a system that can:
+  - Control a **robotic arm** through an interface (like a Raspberry Pi 🍓).
+  - Use a **vision** system with cameras and sensors.
+  - Deploy an **AI model** to analyze objects in its field of view.
+  - Pick up detected objects **autonomously**... all within a reasonable budget 💰.
+
+---
+
+## 📝 Purpose of this README
+
+This document has two main functions:
+
+- 📖 To summarize and clarify the project's goal for myself and for readers.
+- 🗒️ To serve as a **logbook** to document my research and development.
+
+I will record:
+
+- Images 🖼️
+- Diagrams 📐
+- Detailed explanations 📄
+- Solutions to problems encountered 🧩
+- ... and maybe even questions I ask myself along the way 🤔
+
+I will use **ChatGPT** to help me rephrase and improve this document throughout the project.
+
+---
+
+## 📔 Logbook
+
+### 🗓️ 07/22/2025
+
+I started my research by thinking about the design and feasibility of this project.
+
+🔹 First, I looked into choosing a robotic arm but was quickly put off by the prices of mid-range models.
+🔹 Then, I focused more on **sensor-based detection and vision**, exploring several options:
+
+- 2D or 3D Lidar
+- RGB-D Camera
+- Stereo Camera
+- Or a combination of all of these
+
+Since I want to use a **Raspberry Pi** (which I will also use for other projects), I concluded after several hours of research that I could start with:
+
+- 🎥 An **ELP stereo camera** for ~€125
+  [Amazon Link](https://www.amazon.fr/ELP-distorsion-Synchronisation-dordinateur-Raspberry/dp/B07FT2GKZS?source=ps-sl-shoppingads-lpcontext&ref_=fplfs&psc=1&smid=A1XYWUUU38OZI5&gQT=1)
+- 📡 A **TF-Luna sensor** for ~€29
+  [Amazon Link](https://www.amazon.fr/youyeetoo-TF-Luna-Distance-d%C3%A9tection-industrielle/dp/B088BBJ9SQ)
+
+👉 I haven't decided to buy them yet, but this gives me an idea of the feasibility and budget.
+
+👉 I also did not choose the Intel RealSense (the most well-known stereo camera) because it is too large to be mounted on a robotic arm.
+
+---
+
+### 🔧 Technical Thoughts
+
+💡 I quickly realized that the main difficulty will be the **calibration and fusion of data** from the lidar and cameras.
+So, I'm planning to use **Python or C++ with OpenCV (cv2)**, with a preference for Python, especially for integrating AI models.
+
+- OpenCV will allow me to merge the stream from the two cameras and get a usable image output.
+- This is where AI comes in: after some research, I will probably use the **YOLOWorld** model, and later train my own model on a custom dataset (later, as it's very time-consuming).
+
+The model will detect a specific object in the video stream and return its **x** and **y** coordinates.
+If no object is found in the field of view, the arm can move on its axis to scan the area.
+
+---
+
+### 📏 Calibration & Precision
+
+- The entire system (cameras + lidar) will need to be calibrated using an **extrinsic calibration** system, which I don't master yet.
+- To start, I plan to use an **SG90 servo + Arduino** to adjust the camera's axis to reduce the angle between the camera's central axis and the object to about 2° (the max angle of the TF-Luna placed just below the camera). This will allow checking the depth more accurately with the lidar.
+- I will then recalculate the object's **x**, **y** coordinates, taking the calibration into account.
+- In the future, the SG90 will be replaced by a movement of the arm's base.
+
+---
+
+### 🤖 Movement & Trajectory
+
+With the **x, y, z** coordinates, I can determine a path for the arm to retrieve the object, probably using vectors and controllers.
+These thoughts helped me see that I still have time and alternatives before investing in a Raspberry Pi and a robotic arm.
+
+---
+
+### 💰 Estimated Budget
+
+| Equipment                       | Approx. Price |
+| ------------------------------- | ------------- |
+| ELP Stereo Camera               | €125          |
+| TF-Luna Lidar                   | €29           |
+| Robotic Arm (entry/mid)         | €60–200       |
+| Raspberry Pi (+ power, modules) | €150          |
+
+**Estimated Total: ~€400**
+
+---
+
+### 🔜 Next Steps
+
+I will start by:
+
+- Getting familiar with the **YOLOWorld** model and OpenCV.
+- Using my current camera (Logitech StreamCam) to experiment.
+- I need to find a way to stably mount my camera on the SG90.
+- Adjusting the camera's axis to get within the lidar's FOV (~2°) after detecting an object with **YOLOWorld** and calculating the first coordinates in OpenCV.
+
+---
+
+### 🗺️ Diagram
+
+The first big step of this project will be to learn how to use the tools (OpenCV, AI model, etc.) with what I already have, then move on to buying the lidar and camera.
+The goal of this step is to be able to get the **3D coordinates of an object** in the camera's field of view.
+
+Here is the diagram of this first step as I imagine it:
+
+![Step 1 Diagram](schemas/schema1.png)
+
+---
+
+### 🗓️ 11/03/2025
+
+It's been 4 months since I wrote an update on this document, mainly due to lack of time and an intense learning phase.
+
+---
+
+### 🛠️ Learning & Development
+
+These last few months have been dedicated to learning new skills and starting development on the robot.
+
+- I purchased the xArm Esp32 robot arm from [Hiwonder](https://www.hiwonder.com/products/xarm-esp32?variant=39662930067543)
+
+- **ROS2 Training**: I started learning **ROS2** by following this [YouTube tutorial](https://www.youtube.com/watch?v=Gg25GfA456o&t). I learned about the concepts of _nodes_, _publishers_, _subscribers_, _clients_, _servers_, and _actions_.
+- **Robot Control**: Since the **xArm ESP32** arm doesn't have manufacturer software to make development easier, I had to learn how to retrieve the information passing through the USB ports.
+  - Using the **COM8 Monitoring Session** software, I was able to analyze the commands sent by the robot's basic software.
+  - This helped me understand which commands to send to control it. You can find this development in the `utils/xarm_esp32_init.py` file, which manages basic actions.
+- **Math & AI**: I am currently taking math courses on Coursera ([Mathematics for Machine Learning and Data Science by DeepLearning.AI](https://www.coursera.org/specializations/mathematics-machine-learning-data-science)). As a Data & AI master's student, these courses will be essential, especially for my long-term goal of creating my own AI model.
+
+---
+
+### 🏗️ Architecture & Design
+
+My thoughts on the hardware and software architecture have evolved a lot.
+
+- **ROS Architecture Diagram**: I had made an initial diagram of my ROS architecture. It was just a starting point and definitely not a final solution.
+  ![Architecture Diagram](schemas/schema2.png)
+- **Dropping the Lidar**: In the meantime, I decided to no longer use a Lidar sensor (like the TF-Luna).
+  - The main reason is that the stereo camera will be sufficient to generate a **DepthMap** using OpenCV.
+  - Also, the Lidar required very precise alignment (angle < 2°) between the camera, the gripper, and the object.
+  - My first tests showed that the robot is not precise or robust enough for this. The weight, latency, and servo precision caused oscillations (back-and-forth movements) during calibration attempts, without ever succeeding. So, I will focus only on the stereo camera.
+- **Camera Positioning**: I plan to install the stereo camera just below the gripper, attached to the servo that controls it.
+  ![Camera Positioning Diagram](schemas/schema3.png)
+
+---
+
+### 💰 Hardware & Budget
+
+The estimated budget is on track with the following purchases:
+
+| Equipment              | Price     | Link                                                                            |
+| ---------------------- | --------- | ------------------------------------------------------------------------------- |
+| xArm ESP32 Robotic Arm | €229.99   | [Hiwonder](https://www.hiwonder.com/products/xarm-esp32?variant=39662930067543) |
+| ELP Stereo USB Camera  | €125      | [Amazon](https://www.amazon.fr/dp/B07FT2GKZS)                                   |
+| Raspberry Pi           | To buy    |                                                                                 |
+| **Total (current)**    | **~€355** |                                                                                 |
+
+These purchases fit well within the estimated €400 budget I mentioned earlier.
+
+---
+
+### 🗺️ Outline & Goals (Update)
+
+With these new elements, the project's outline is becoming clearer:
+
+1.  **Goal**: Autonomously pick up an object (a tennis ball to start).
+2.  **AI (Vision)**: I will use **YOLOv8** (for its performance) for object detection.
+3.  **Vision (Depth)**: The **stereo camera** and **OpenCV** will allow me to generate a DepthMap and get the object's **3D coordinates**.
+4.  **Movement**: I will learn to use **URDF** files (to model the robot) and the **MoveIt** library (to plan the trajectory) to determine the optimal path to grab the object.
+5.  **Future**: Eventually, I want to create my own AI model, possibly based on **reinforcement learning** (either for object recognition or for the complete grasping task).
+
+---
+
+### 🔜 Next Steps
+
+Now that the ideas and technologies are clearer:
+
+- Wait for my stereo camera to be delivered.
+- Continue learning ROS2, especially **URDF files** and **MoveIt** (via the same YouTube channel).
+- Learn 3D modeling or 3D printing to create a custom camera mount.
+  - I will contact my school's innovation club, which offers training.
+  - Alternatively, I will adapt an existing 3D model, like [this one](https://makerworld.com/en/models/27135-raspberry-camera-mount?from=search), and contact its creator to see if it's compatible.
+- Redraw a more detailed global project architecture diagram.
+- Try to contact Edouard Renard (robotics instructor) to ask his opinion on my architecture and ideas before developing.
+
+---
+
+### 🗓️ 11/08/2025
+
+Progress continues, with advances in the vision part and the robot's modeling.
+
+---
+
+### 🛠️ Development & Vision
+
+- **Stereo Camera**: I received my ELP stereo camera.
+- **Test Script**: I was able to write a first script `utils/stereo_camera.py` that lets me initialize the camera and display the video feeds from both cameras.
+
+---
+
+### 🏗️ Architecture (Update)
+
+I simplified my main architecture to make it more achievable for a first version.
+
+- **New Architecture**:
+  ![Architecture Diagram](schemas/schema4.png)
+- **Current Limitations**: In this setup, the robot is not capable of real-time operation. It will have to wait for the object to be picked up to be still, and to remain still during the entire movement.
+- **V1 Goal**: I will stick to this approach for the first version of the project. Real-time trajectory correction will be an improvement for the future.
+
+---
+
+### 🦾 Modeling & URDF
+
+Creating the robot's digital twin in ROS2 was a major and complex step.
+
+- **URDF File**: I learned to write a `.xacro` file and build a ROS2 package.
+- **3D Model**: The Hiwonder company provided me with the `.stp` file for my robot, which I opened in **Fusion360**.
+- **Assembly**: I had to sort and assemble the 309 base parts into logical "components" (gripper, base, limb1, etc.) and create the joints between them.
+- **Major Difficulty**: The default export script ([fusion2urdf](https://github.com/syuntoku14/fusion2urdf/tree/master)) does not accept Fusion's "as-built" joints. But I couldn't use simple joints because the parts were already assembled in the base `.stp` file.
+- **Solution**: After 3 days of searching, I found a [GitHub issue](https://github.com/syuntoku14/fusion2urdf/issues/78) describing the same problem.
+  - A big thank you to **Colin Fuelberth** ([@Infinite-Echo](https://github.com/Infinite-Echo)) who forked and adapted the script to support "as-built" joints!
+  - **Script used**: [Infinite-Echo/ROS2_fusion2URDF](https://github.com/Infinite-Echo/ROS2_fusion2URDF/tree/URDF_Exporter_asBuilt_Support)
+- **Result**: I was finally able to export a complete ROS2 package with a `.xacro` file that describes my robot arm, which is in the `modelisations/robot/xArm32_description` folder. This URDF does not include the gripper's opening and closing. I will adapt it when the time comes; the main goal was to have the basics and learn the Fusion software.
+
+---
+
+### 🔜 Next Steps
+
+- I am currently following a **Blender** tutorial which will allow me to model and 3D print my own camera mount in the future.
+- **Switch to Docker or Linux** (with a dual boot) for ROS2. I am way too limited with Windows, which doesn't make it easy, especially for opening and viewing my `.xacro`.
+
+---
+
+### 🗓️ 11/14/2025
+
+I've continued working on the URDF model these last few days. I described the joints between the arm's segments (limbs) with limits, except for the gripper because understanding _mimics_ is a bit too complex for me right now. I'll probably control the gripper directly via the ESP32.
+
+In the `app` folder, the first `joint_state_publisher_node` package is functional with the instructions.
+I switched to Docker for ROS2 Humble, but I'm facing a frames-per-second (FPS) problem during simulation in RViz or Gazebo, which makes the user experience unpleasant.
+
+You can find a zip file here containing the `.stp` provided by Hiwonder and the Fusion360 file I edited, in case modifications or improvements are needed: [Google Drive Link](https://drive.google.com/file/d/1qIVWolMBeF4Z5x8Bm8aadgIRzJTUaZLs/view?usp=sharing)
+
+Thanks to this important step, I can visualize the main joints of the arm via RViz or Gazebo.
+I don't think I will use Gazebo in this project.
+
+![RViz result](schemas/schema5.gif)
+
+---
+
+### 🔜 Next Steps
+
+- I am currently following a **Blender** tutorial that will allow me to model and 3D print my own camera mount in the future.
+- Learn about **ros2_control** and **MoveIt**.
+- Learn to use _mimic joints_, which would allow me to move the gripper in RViz as well. I have already started creating the necessary joints in Fusion for this, but the URDF format does not accept closed joint loops.
+
+![Fusion360 gripper visualization](schemas/schema6.gif)
+
+---
+
+## 🇫🇷 Version Française
+
+# 🤖✨ DeepSight-Nebula
+
 **DeepSight-Nebula est un projet alliant Robotique & Intelligence Artificielle.**
 
 ---
