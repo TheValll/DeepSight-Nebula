@@ -1,0 +1,192 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="xArm32_urdf">
+  <xacro:property name="package_name" value="xArm32_urdf_description"/>
+  <xacro:include filename="$(find ${package_name})/urdf/materials.xacro"/>
+  <xacro:include filename="$(find ${package_name})/urdf/gazebo.xacro"/>
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-2.5136318187e-04 3.6738388322e-02 1.9525083221e-02" rpy="0.0 0.0 0.0"/>
+      <mass value="1.0200789537e+00"/>
+      <inertia ixx="5.7909703765e-03" iyy="1.6733106056e-03" izz="6.8377728120e-03" ixy="-8.4040324121e-06" iyz="5.3668103022e-04" ixz="5.5312477767e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0000000000e+00 0.0000000000e+00 0.0000000000e+00" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/base.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0000000000e+00 0.0000000000e+00 0.0000000000e+00" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/base_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="limb1_link">
+    <inertial>
+      <origin xyz="-1.8424513004e-03 7.3544495455e-03 2.2685748460e-02" rpy="0.0 0.0 0.0"/>
+      <mass value="3.7624836484e-01"/>
+      <inertia ixx="1.4686898513e-04" iyy="1.3684389731e-04" izz="1.7012247556e-04" ixy="1.7282639243e-06" iyz="-1.9531049898e-05" ixz="4.8784764981e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="8.7508039389e-05 -2.4665431616e-03 -3.7808120972e-02" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="8.7508039389e-05 -2.4665431616e-03 -3.7808120972e-02" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb1_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <xacro:if value="${'Steel' in existing_contact_coefficients}">
+        <xacro:insert_block name="Steel_contact_coefficients"/>
+      </xacro:if>
+
+    </collision>
+  </link>
+
+    <joint name="limb1_to_base_link_joint" type="revolute">
+    <origin xyz="-8.7508039389e-05 2.4665431616e-03 3.7808120972e-02" rpy="0.0 0.0 0.0"/>
+    <parent link="base_link"/>
+    <child link="limb1_link"/>
+    <axis xyz="0.0 -0.0 -1.0"/>
+    <limit lower="-3.05433" upper="3.05433" effort="1000" velocity="1.57"/>
+  </joint>
+
+  <link name="limb2_link">
+    <inertial>
+      <origin xyz="-2.2654928261e-02 3.4807482089e-02 3.8534376434e-02" rpy="0.0 0.0 0.0"/>
+      <mass value="2.1979910798e-01"/>
+      <inertia ixx="2.3259826561e-04" iyy="1.9592240785e-04" izz="1.7484090664e-04" ixy="5.1572880394e-07" iyz="-1.0409934294e-04" ixz="5.7500934025e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="-2.3557059733e-02 -3.6807792225e-03 -6.8592347635e-02" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="-2.3557059733e-02 -3.6807792225e-03 -6.8592347635e-02" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb2_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <xacro:if value="${'Steel' in existing_contact_coefficients}">
+        <xacro:insert_block name="Steel_contact_coefficients"/>
+      </xacro:if>
+
+    </collision>
+  </link>
+
+    <joint name="limb2_to_limb1_joint" type="revolute">
+    <origin xyz="2.3644567772e-02 1.2142360609e-03 3.0784226663e-02" rpy="0.733037 0.001213 0.000165"/>
+    <parent link="limb1_link"/>
+    <child link="limb2_link"/>
+    <axis xyz="-0.999999 -0.001663 0.000392"/>
+    <limit lower="-1.5708" upper="1.5708" effort="1000" velocity="1.57"/>
+  </joint>
+
+  <link name="limb3_link">
+    <inertial>
+      <origin xyz="1.7608172668e-02 -2.5095942680e-02 2.9124593843e-02" rpy="0.0 0.0 0.0"/>
+      <mass value="4.4944860987e-01"/>
+      <inertia ixx="6.1184101261e-04" iyy="3.3380026692e-04" izz="3.2786459303e-04" ixy="5.9964463800e-07" iyz="2.8679230177e-04" ixz="-6.4649735326e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="2.0291665472e-02 -7.1080724887e-02 -1.4314530832e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="2.0291665472e-02 -7.1080724887e-02 -1.4314530832e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb3_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <xacro:if value="${'Steel' in existing_contact_coefficients}">
+        <xacro:insert_block name="Steel_contact_coefficients"/>
+      </xacro:if>
+
+    </collision>
+  </link>
+
+    <joint name="limb3_to_limb2_joint" type="revolute">
+    <origin xyz="-4.3848725205e-02 6.7399945664e-02 7.4552960681e-02" rpy="-1.518436 -0.0 0.0"/>
+    <parent link="limb2_link"/>
+    <child link="limb3_link"/>
+    <axis xyz="1.0 0.0 -0.0"/>
+    <limit lower="-2.35619" upper="2.35619" effort="1000" velocity="1.57"/>
+  </joint>
+
+  <link name="limb4_link">
+    <inertial>
+      <origin xyz="2.0637652858e-02 -3.3181863724e-02 -8.6754562080e-03" rpy="0.0 0.0 0.0"/>
+      <mass value="2.5804712187e-01"/>
+      <inertia ixx="9.1250359292e-05" iyy="7.2246782188e-05" izz="7.9674610295e-05" ixy="1.3617910034e-06" iyz="-8.8127927418e-06" ixz="3.2883074020e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="2.5162858234e-02 -1.2803167953e-02 -2.0580338316e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="2.5162858234e-02 -1.2803167953e-02 -2.0580338316e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb4_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <xacro:if value="${'Steel' in existing_contact_coefficients}">
+        <xacro:insert_block name="Steel_contact_coefficients"/>
+      </xacro:if>
+
+    </collision>
+  </link>
+
+    <joint name="limb4_to_limb3_joint" type="revolute">
+    <origin xyz="-4.8711927624e-03 -5.8277556934e-02 6.2658074847e-02" rpy="-0.785398 -0.0 0.0"/>
+    <parent link="limb3_link"/>
+    <child link="limb4_link"/>
+    <axis xyz="-1.0 -0.0 -0.0"/>
+    <limit lower="-2.35619" upper="1.5708" effort="1000" velocity="1.57"/>
+  </joint>
+
+  <link name="limb5_link">
+    <inertial>
+      <origin xyz="7.7154870149e-03 -4.0559321513e-02 -5.2491131837e-03" rpy="0.0 0.0 0.0"/>
+      <mass value="3.2874899442e-01"/>
+      <inertia ixx="2.8235257761e-04" iyy="1.6425926679e-04" izz="2.6530790185e-04" ixy="-3.1524846847e-05" iyz="2.0230196007e-05" ixz="-8.4797912184e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="4.3622184176e-03 3.9727445654e-02 -2.0578666054e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="4.3622184176e-03 3.9727445654e-02 -2.0578666054e-01" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="file://$(find ${package_name})/meshes/limb5_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <xacro:if value="${'Steel' in existing_contact_coefficients}">
+        <xacro:insert_block name="Steel_contact_coefficients"/>
+      </xacro:if>
+
+    </collision>
+  </link>
+
+    <joint name="limb5_to_limb4_joint" type="revolute">
+    <origin xyz="2.0800639817e-02 -5.2530613607e-02 -1.6722621820e-05" rpy="-0.001296 1.134464 -0.000736"/>
+    <parent link="limb4_link"/>
+    <child link="limb5_link"/>
+    <axis xyz="-0.000649 1.0 7e-05"/>
+    <limit lower="-2.35619" upper="2.35619" effort="1000" velocity="1.57"/>
+  </joint>
+
+</robot>

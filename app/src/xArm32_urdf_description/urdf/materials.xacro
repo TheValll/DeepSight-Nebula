@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="xArm32_urdf">
+  <material name="Steel">
+    <color rgba="1.0 1.0 1.0 1.0"/>
+  </material>
+  <xacro:property name="existing_contact_coefficients" value="[]"/>
+</robot>

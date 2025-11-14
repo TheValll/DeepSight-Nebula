@@ -254,3 +254,29 @@ La création du jumeau numérique du robot dans ROS2 a été une étape majeure 
 
 - Je suis actuellement un tutoriel **Blender** qui me permettra à l'avenir de modéliser et d'imprimer en 3D mon propre support de caméra.
 - **Passer via Docker ou Linux** (avec un dual boot) pour ROS2. Je suis beaucoup trop limité avec mon Windows qui ne me facilite pas la tâche, surtout pour ouvrir et visualiser mon `.xacro`.
+
+---
+
+### 🗓️ 14/11/2025
+
+J'ai continué ces derniers jours sur le modèle URDF. J'ai décrit les joints entre les segments (_limbs_) du bras avec des limites, à l'exception de la pince car comprendre les _mimics_ est un peu trop complexe pour moi pour le moment. Je contrôlerai sûrement la pince via l'ESP32 directement.
+
+Dans le dossier `app`, le premier package du `joint_state_publisher_node` est fonctionnel avec les instructions.
+J'ai notamment effectué le changement vers Docker pour ROS2 Humble mais je rencontre un problème d'images par seconde (FPS) pendant la simulation sous RViz ou Gazebo, ce qui rend l'expérience utilisateur désagréable.
+
+Vous trouverez ici un zip contenant le `.stp` fourni par Hiwonder et le fichier Fusion360 que j'ai édité si des modifications ou des améliorations sont à faire : [Lien Google Drive](https://drive.google.com/file/d/1qIVWolMBeF4Z5x8Bm8aadgIRzJTUaZLs/view?usp=sharing)
+
+Grâce à cette étape importante, je peux visualiser les articulations principales du bras via RViz ou Gazebo.
+Je ne pense pas me servir de Gazebo dans ce projet.
+
+![RViz résultat](schemas/schema5.gif)
+
+### 🔜 Prochaines étapes
+
+- Je suis actuellement un tutoriel **Blender** qui me permettra à l'avenir de modéliser et d'imprimer en 3D mon propre support de caméra.
+- Me renseigner sur **ros2_control** et **MoveIt**.
+- Apprendre à utiliser des _mimic joints_ qui me permettraient de faire bouger la pince dans RViz également. J'ai déjà commencé à créer les joints nécessaires sur Fusion pour cela, mais le format URDF n'accepte pas les boucles de joints fermées.
+
+![Fusion360 pince visualisation](schemas/schema6.gif)
+
+---
