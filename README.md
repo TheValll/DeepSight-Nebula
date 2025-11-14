@@ -6,14 +6,14 @@
 
 ### 🇬🇧 English Version
 
-- [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula)
-- [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula)
-- [Purpose of this README](#-purpose-of-this-readme)
-- [Logbook (English)](#-logbook)
+- [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula-1)
+- [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula-1)
+- [Purpose of this README](#-purpose-of-this-readme-1)
+- [Logbook (English)](#-logbook-1)
 
 ### 🇫🇷 Version Française
 
-- [Pourquoi le nom _DeepSight-Nebula_ ?](#-pourquoi-le-nom-deepsight-nebula-)
+- [Pourquoi le nom _DeepSight-Nebula_ ?](#-pourquoi-le-nom-deepsight-nebula)
 - [Objectifs de DeepSight-Nebula](#-objectifs-de-deepsight-nebula)
 - [Objectif de ce README](#-objectif-de-ce-readme)
 - [Journal de bord](#-journal-de-bord)
