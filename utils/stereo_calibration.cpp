@@ -3,29 +3,134 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <filesystem> 
+#include <filesystem>
+#include <algorithm>
 #include "opencv2/opencv.hpp"
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
 
-string left_frame_path = "images/left";
-string right_frame_path = "images/right";
+const string LEFT_FRAME_PATH = "images/left"; 
+const string RIGHT_FRAME_PATH = "images/right";
+
+const int CHECKERBOARD_WIDTH = 8;
+const int CHECKERBOARD_HEIGHT = 5;
+const float SQUARE_SIZE = 0.025f;
+const Size boardSize(CHECKERBOARD_WIDTH, CHECKERBOARD_HEIGHT);
+
+void create_folders();
+void camera_stereo_calibration();
+void capture_frames();
+
+int main() {
+    create_folders();
+    capture_frames();
+    camera_stereo_calibration();
+    return 0;
+}
 
 void create_folders(){
     try {
-        if (!fs::exists(left_frame_path)) {
-            fs::create_directories(left_frame_path);
-            cout << "Folder created : " << left_frame_path << endl;
+        if (!fs::exists(LEFT_FRAME_PATH)) {
+            fs::create_directories(LEFT_FRAME_PATH);
+            cout << "Folder created : " << LEFT_FRAME_PATH << endl;
         }
-        if (!fs::exists(right_frame_path)) {
-            fs::create_directories(right_frame_path);
-            cout << "Folder created : " << right_frame_path << endl;
+        if (!fs::exists(RIGHT_FRAME_PATH)) {
+            fs::create_directories(RIGHT_FRAME_PATH);
+            cout << "Folder created : " << RIGHT_FRAME_PATH << endl;
         }
     } catch (const fs::filesystem_error& e) {
         cerr << "Error with folders creation : " << e.what() << endl;
     }
+}
+
+void camera_stereo_calibration(){
+    vector<vector<Point3f>> objpoints; 
+    vector<vector<Point2f>> imgpointsL, imgpointsR; 
+    vector<Point3f> objp;
+    vector<String> imagesL, imagesR;
+
+    Mat frameL, frameR, grayL, grayR;
+    Mat K1, D1, K2, D2;
+    Mat R, T, E, F; 
+    K1 = Mat::eye(3, 3, CV_64F);
+    K2 = Mat::eye(3, 3, CV_64F);
+
+    for (int i = 0; i < CHECKERBOARD_HEIGHT; i++) {
+        for (int j = 0; j < CHECKERBOARD_WIDTH; j++) {
+            objp.push_back(Point3f(j * SQUARE_SIZE, i * SQUARE_SIZE, 0));
+        }
+    }
+
+    glob("images/left/*.png", imagesL); 
+    glob("images/right/*.png", imagesR);
+
+    sort(imagesL.begin(), imagesL.end());
+    sort(imagesR.begin(), imagesR.end());
+
+    if (imagesL.size() != imagesR.size() || imagesL.empty()) {
+        cerr << "Error : The number of images are different or folders are empty." << endl;
+        return;
+    }
+
+    for (size_t i = 0; i < imagesL.size(); i++) {
+        frameL = imread(imagesL[i]);
+        frameR = imread(imagesR[i]);
+
+        if (frameL.empty() || frameR.empty()) continue;
+
+        cvtColor(frameL, grayL, COLOR_BGR2GRAY);
+        cvtColor(frameR, grayR, COLOR_BGR2GRAY);
+
+        vector<Point2f> cornersL, cornersR;
+
+        bool foundL = findChessboardCorners(grayL, boardSize, cornersL, 
+            CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
+        bool foundR = findChessboardCorners(grayR, boardSize, cornersR, 
+            CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE);
+
+        if (foundL && foundR) {
+            cornerSubPix(grayL, cornersL, Size(11, 11), Size(-1, -1),
+                TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.01));
+            cornerSubPix(grayR, cornersR, Size(11, 11), Size(-1, -1),
+                TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.01));
+
+            imgpointsL.push_back(cornersL);
+            imgpointsR.push_back(cornersR);
+            objpoints.push_back(objp);
+
+            drawChessboardCorners(frameL, boardSize, cornersL, foundL);
+            imshow("Detection Left", frameL);
+            waitKey(10);
+        }
+    }
+
+    destroyAllWindows();
+
+    if (imgpointsL.empty()) {
+        cerr << "No pair found for the calibration." << endl;
+        return;
+    }
+
+    double rms = stereoCalibrate(objpoints, imgpointsL, imgpointsR, K1, D1, K2, D2, frameL.size(), R, T, E, F, CALIB_RATIONAL_MODEL, TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
+
+    cout << "Calibration finished : RMS Error: " << rms << endl;
+    cout << "Matrix (K1):\n" << K1 << endl;
+    cout << "Matrix (K2):\n" << K2 << endl;
+    cout << "Translation (T):\n" << T << endl;
+    cout << "Rotation (R):\n" << R << endl;
+
+    FileStorage fs("stereo_calib.xml", FileStorage::WRITE);
+    fs << "K1" << K1 << "D1" << D1;
+    fs << "K2" << K2 << "D2" << D2;
+    fs << "R" << R << "T" << T;
+    fs.release();
+
+    cout << "Settings saved in 'stereo_calib.xml'" << endl;
 }
 
 void capture_frames(){
@@ -37,6 +142,7 @@ void capture_frames(){
 
     if (!cap.isOpened()) {
         cerr << "Error : Impossible to open the camera" << endl;
+        return;
     }
 
     namedWindow("Left", WINDOW_NORMAL);
@@ -80,11 +186,11 @@ void capture_frames(){
         }
         else if (key == 's') {
             try {
-                string left_filename = left_frame_path + "/" + to_string(capture_count) + "_frame.png";
-                string right_filename = right_frame_path + "/" + to_string(capture_count) + "_frame.png";
+                string left_filename = LEFT_FRAME_PATH + "/" + to_string(capture_count) + "_frame.png";
+                string right_filename = RIGHT_FRAME_PATH + "/" + to_string(capture_count) + "_frame.png";
 
                 if (!imwrite(left_filename, left_img)) {
-                    throw runtime_error("imwrite failed for left image. Check directory permissions.");
+                    throw runtime_error("imwrite failed for left image.");
                 }
                 cout << "Frame saved (" << capture_count << ") : " << left_filename << endl;
 
@@ -100,26 +206,12 @@ void capture_frames(){
                     break;
                 }
             }
-            catch (const cv::Exception& e) {
-                cerr << "OpenCV Error while saving images: " << e.what() << endl;
-            }
             catch (const std::exception& e) {
                 cerr << "Error while saving images: " << e.what() << endl;
-            }
-            catch (...) {
-                cerr << "Unknown error while saving images." << endl;
             }
         }
     }
 
     destroyAllWindows();
     cap.release();
-}
-
-
-int main() {
-    create_folders();
-    capture_frames();
-
-    return 0;
 }
