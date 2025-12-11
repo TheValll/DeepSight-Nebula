@@ -305,6 +305,52 @@ I don't think I will use Gazebo in this project.
 
 ---
 
+### 🗓️ 11/12/2025
+
+Significant progress on the project with several major changes, particularly regarding the development environment and mechanical design.
+
+---
+
+### 🖨️ Modeling & 3D Printing
+
+I finished the Blender tutorial and was able to perform my first test print for the camera mount.
+
+- **First attempt**: The print went well, but a dimension issue (off by a few millimeters) prevents the camera from fitting into the mount.
+- **Correction**: I redesigned the part and am waiting for the new print. Here are images of the failed first prototype anyway:
+
+![Image support](schemas/schema7.jpg)
+![Image support](schemas/schema8.jpg)
+![Schéma Blender du support](schemas/schema9.png)
+![Schéma Blender du support](schemas/schema10.png)
+
+- **Acknowledgments**:
+  - Thanks to **Bertrand . Tech** for his [Blender tutorial](https://www.youtube.com/watch?v=_5Js5pbvFSw&t).
+  - Huge thanks also to [weebzardbbx](https://www.twitch.tv/weebzardbbx) for the advice and tips that helped me build this mount! <3
+
+---
+
+### 🐧 Environment & Language (C++)
+
+I performed a significant technical migration to optimize the workflow.
+
+- **ArchLinux Dual-boot**: I switched to ArchLinux in dual-boot to facilitate passing devices through to the Docker container used for development.
+- **Transition to C++**: I decided to develop the core of the project in C++ (with a few Python scripts).
+  - _Goal_: To achieve better real-time performance and deepen my mastery of this language, unlike Python which I have used daily for over 2 years in my work-study program.
+  - _Training_: I refreshed my C++ skills using tutorials and Gemini's help to unblock complex errors related to Linux or the language itself.
+- **Stereo Calibration**: I started by developing the `utils/calibration/stereo_calibration.cpp` tool (with a CMake file) which allows me to calibrate my camera and obtain an XML file, which is essential for the rest of the project.
+
+---
+
+### 🔜 Next Steps
+
+- Look into **ros2_control** and **MoveIt**.
+- Learn to use _mimic joints_ to move the gripper in RViz. I have already started creating the necessary joints in Fusion, but the URDF format does not accept closed joint loops.
+- Develop a ROS2 node for camera calibration.
+- Create a node to locate an object in 3D using the **YOLO** model (which I have already experimented with), but this time implemented in C++.
+- Rewrite the **README** in the `app` folder to explain all the project installation procedures.
+
+---
+
 # 🤖✨ DeepSight-Nebula - 🇫🇷
 
 **DeepSight-Nebula est un projet alliant Robotique & Intelligence Artificielle.**
@@ -587,5 +633,51 @@ Je ne pense pas me servir de Gazebo dans ce projet.
 - Apprendre à utiliser des _mimic joints_ qui me permettraient de faire bouger la pince dans RViz également. J'ai déjà commencé à créer les joints nécessaires sur Fusion pour cela, mais le format URDF n'accepte pas les boucles de joints fermées.
 
 ![Fusion360 pince visualisation](schemas/schema6.gif)
+
+---
+
+### 🗓️ 11/12/2025
+
+Grosse avancée dans le projet avec plusieurs changements majeurs, notamment sur l'environnement de développement et la conception mécanique.
+
+---
+
+### 🖨️ Modélisation & Impression 3D
+
+J'ai terminé le tutoriel Blender et j'ai pu effectuer mon premier test d'impression pour le support de la caméra.
+
+- **Premier essai** : L'impression s'est bien passée, mais un problème de dimensions (à quelques millimètres près) empêche la caméra de rentrer dans le support.
+- **Correction** : J'ai redessiné la pièce et je suis en attente de la nouvelle impression. Voici tout de même des images du premier prototype raté :
+
+![Image support](schemas/schema7.jpg)
+![Image support](schemas/schema8.jpg)
+![Schéma Blender du support](schemas/schema9.png)
+![Schéma Blender du support](schemas/schema10.png)
+
+- **Remerciements** :
+  - Merci à **Bertrand . Tech** pour son [tutoriel Blender](https://www.youtube.com/watch?v=_5Js5pbvFSw&t).
+  - Merci également à [weebzardbbx](https://www.twitch.tv/weebzardbbx) pour les conseils et astuces qui m'ont aidé à construire ce support ! <3
+
+---
+
+### 🐧 Environnement & Langage (C++)
+
+J'ai effectué une migration technique importante pour optimiser le flux de travail.
+
+- **Dual-boot ArchLinux** : Je suis passé sur ArchLinux en dual-boot pour faciliter la transmission des périphériques (_devices_) vers le conteneur Docker utilisé pour le développement.
+- **Transition vers le C++** : J'ai pris la décision de développer le cœur du projet en C++ (avec quelques scripts Python).
+  - _Objectif_ : Obtenir de meilleures performances en temps réel et approfondir ma maîtrise de ce langage, contrairement à Python que j'utilise quotidiennement depuis plus de 2 ans en alternance.
+  - _Formation_ : Je me suis remis à niveau en C++ grâce à des tutoriels et à l'aide de Gemini pour débloquer certaines erreurs complexes sous Linux ou liées au langage.
+- **Calibration Stéréo** : J'ai commencé par développer l'outil `utils/calibration/stereo_calibration.cpp` (avec un fichier CMake) qui me permet de calibrer ma caméra et d'obtenir un fichier XML, indispensable pour la suite du projet.
+
+---
+
+### 🔜 Prochaines étapes
+
+- Me renseigner sur **ros2_control** et **MoveIt**.
+- Apprendre à utiliser des _mimic joints_ pour faire bouger la pince dans RViz. J'ai déjà commencé à créer les joints nécessaires sur Fusion, mais le format URDF n'accepte pas les boucles de joints fermées.
+- Développer un node ROS2 pour la calibration de la caméra.
+- Créer un node permettant de localiser un objet en 3D via le modèle **YOLO** (que j'ai déjà expérimenté), mais cette fois-ci implémenté en C++.
+- Réécrire le **README** dans le dossier `app` pour expliquer toutes les procédures d'installation du projet.
 
 ---
