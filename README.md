@@ -6,6 +6,7 @@
 
 ### 🇬🇧 English Version
 
+- [Setup environnement](#-setup-environnement)
 - [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula)
 - [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula)
 - [Purpose of this README](#-purpose-of-this-readme)
@@ -13,6 +14,7 @@
 
 ### 🇫🇷 Version Française
 
+- [Configuration de l'environnement](#-setup-environnement)
 - [Pourquoi le nom _DeepSight-Nebula_ ?](#-pourquoi-le-nom-deepsight-nebula-)
 - [Objectifs de DeepSight-Nebula](#-objectifs-de-deepsight-nebula)
 - [Objectif de ce README](#-objectif-de-ce-readme)
@@ -23,6 +25,102 @@
 ## 🇬🇧 English Version
 
 **DeepSight-Nebula is a project combining Robotics & Artificial Intelligence.**
+
+---
+
+## 🔧 Environment Setup
+
+This project was developed on an **Arch Linux** environment using Docker.
+
+> **⚠️ Important Note for macOS and Windows Users:**
+> To access hardware devices (USB cameras, serial ports) inside the container, you must use **Native Linux**.
+> On macOS or Windows, Docker Desktop runs in a virtual machine that does not automatically support USB passthrough. You may need to use a dedicated VM (like UTM or VirtualBox) with USB passthrough enabled to make this work.
+
+### Prerequisites
+
+- **Linux:** Docker Engine (Native) & Docker Compose
+- **macOS/Windows:** Not officially supported for hardware interaction without advanced VM configuration.
+
+### Installation & Execution
+
+#### 1. Build the Docker image
+
+```bash
+docker compose build
+```
+
+#### 2. Allow X11 display access (for GUI)
+
+```bash
+xhost +local:docker
+```
+
+#### 3. Start the container
+
+```bash
+docker compose up -d
+```
+
+#### 4. Enter the container
+
+Open a new terminal and run:
+
+```bash
+docker exec -it ros2_dev_env bash
+```
+
+#### 5. Build the ROS 2 project
+
+Inside the container:
+
+```bash
+cd app
+colcon build
+source install/setup.bash
+```
+
+## 📦 ROS 2 Packages Documentation
+
+### 1. xArm32 URDF Description
+
+This folder contains the URDF description of the xArm32 robot for ROS 2 Humble, including Gazebo models.
+
+#### Launch visualization:
+
+```bash
+ros2 launch urdf_tutorial display.launch.py model:=/ros2_ws/app/src/xArm32_urdf_description/urdf/xArm32_urdf.xacro
+```
+
+### 2. Calibration Package
+
+This package contains an application to calibrate a stereo camera.
+
+#### Prerequisites
+
+- A stereo camera connected via USB.
+- A 9x6 Chessboard with 25mm squares.
+
+Configuration: If your chessboard dimensions differ, please modify the configuration in:
+
+```bash
+app/src/calibration_package/include/calibration_package/calibration_node.hpp
+```
+
+#### Usage
+
+Run the calibration node:
+
+```bash
+ros2 run calibration_package calibration_exe
+```
+
+#### How it works
+
+1. The script uses VideoCapture (default index: 2) in the capture_frames function.
+   Note: You may need to change this index in the code if your camera is on a different port (e.g., /dev/video0).
+2. The application will ask you to press **'S'** to take pictures of your chessboard in different positions.
+3. Once enough images are captured, it automatically calculates the calibration matrices.
+4. A **calibration folder** will be created containing the captured images and the resulting XML calibration file.
 
 ---
 
