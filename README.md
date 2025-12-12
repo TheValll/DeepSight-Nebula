@@ -6,7 +6,7 @@
 
 ### 🇬🇧 English Version
 
-- [Setup environnement](#-setup-environnement)
+- [Environment Setup](#-environment-setup)
 - [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula)
 - [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula)
 - [Purpose of this README](#-purpose-of-this-readme)
@@ -14,7 +14,7 @@
 
 ### 🇫🇷 Version Française
 
-- [Configuration de l'environnement](#-setup-environnement)
+- [Configuration de l'environnement](#-environment-setup)
 - [Pourquoi le nom _DeepSight-Nebula_ ?](#-pourquoi-le-nom-deepsight-nebula-)
 - [Objectifs de DeepSight-Nebula](#-objectifs-de-deepsight-nebula)
 - [Objectif de ce README](#-objectif-de-ce-readme)
