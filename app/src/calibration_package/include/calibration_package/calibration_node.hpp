@@ -150,8 +150,8 @@ void capture_frames(){
     namedWindow("Left", WINDOW_NORMAL);
     namedWindow("Right", WINDOW_NORMAL);
 
-    resizeWindow("Left", 640, 480);
-    resizeWindow("Right", 640, 480);
+    resizeWindow("Left", 640, 640);
+    resizeWindow("Right", 640, 640);
 
     Mat frame, left_img, right_img;
     int capture_count = 0;
