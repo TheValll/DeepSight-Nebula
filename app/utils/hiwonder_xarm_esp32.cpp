@@ -85,12 +85,12 @@ void Hiwonder::open_hiwonder() {
 
 void Hiwonder::ready_position() {
     std::vector<std::string> cmds = {
-        "bus_servo.run(1,500,2000)",
-        "bus_servo.run(2,500,2000)",
-        "bus_servo.run(3,200,2000)",
-        "bus_servo.run(4,750,2000)",
-        "bus_servo.run(5,500,2000)",
-        "bus_servo.run(6,500,2000)"
+        "bus_servo.run(1,500,1000)",
+        "bus_servo.run(2,500,1000)",
+        "bus_servo.run(3,200,1000)",
+        "bus_servo.run(4,750,1000)",
+        "bus_servo.run(5,500,1000)",
+        "bus_servo.run(6,500,1000)"
     };
 
     for(const auto& cmd : cmds){
@@ -100,12 +100,12 @@ void Hiwonder::ready_position() {
 
 void Hiwonder::default_position() {
     std::vector<std::string> cmds = {
-        "bus_servo.run(1,500,2000)",
-        "bus_servo.run(2,500,2000)",
-        "bus_servo.run(3,500,2000)",
-        "bus_servo.run(4,500,2000)",
-        "bus_servo.run(5,500,2000)",
-        "bus_servo.run(6,500,2000)"
+        "bus_servo.run(1,500,1000)",
+        "bus_servo.run(2,500,1000)",
+        "bus_servo.run(3,500,1000)",
+        "bus_servo.run(4,500,1000)",
+        "bus_servo.run(5,500,1000)",
+        "bus_servo.run(6,500,1000)"
     };
 
     for(const auto& cmd : cmds){

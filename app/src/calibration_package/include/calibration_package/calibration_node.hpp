@@ -1,5 +1,4 @@
-// g++ -std=c++17 stereo_calibration.cpp -o calibration `pkg-config --cflags --libs opencv4`
-
+#include "rclcpp/rclcpp.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -14,8 +13,8 @@ using namespace std;
 using namespace cv;
 namespace fs = std::filesystem;
 
-const string LEFT_FRAME_PATH = "images/left"; 
-const string RIGHT_FRAME_PATH = "images/right";
+const string LEFT_FRAME_PATH = "calibration/images/left"; 
+const string RIGHT_FRAME_PATH = "calibration/images/right";
 
 const int CHECKERBOARD_WIDTH = 8;
 const int CHECKERBOARD_HEIGHT = 5;
@@ -26,12 +25,15 @@ void create_folders();
 void camera_stereo_calibration();
 void capture_frames();
 
-int main() {
-    create_folders();
-    capture_frames();
-    camera_stereo_calibration();
-    return 0;
-}
+class CalibrationNode: public rclcpp::Node{
+    public:
+        CalibrationNode(): Node("calibrarion_node"){
+            create_folders();
+            capture_frames();
+            camera_stereo_calibration();
+        }
+    private :
+};
 
 void create_folders(){
     try {
@@ -66,8 +68,8 @@ void camera_stereo_calibration(){
         }
     }
 
-    glob("images/left/*.png", imagesL); 
-    glob("images/right/*.png", imagesR);
+    glob("calibration/images/left/*.png", imagesL); 
+    glob("calibration/images/right/*.png", imagesR);
 
     sort(imagesL.begin(), imagesL.end());
     sort(imagesR.begin(), imagesR.end());
@@ -124,13 +126,13 @@ void camera_stereo_calibration(){
     cout << "Translation (T):\n" << T << endl;
     cout << "Rotation (R):\n" << R << endl;
 
-    FileStorage fs("stereo_calib.xml", FileStorage::WRITE);
+    FileStorage fs("calibration/stereo_calib.xml", FileStorage::WRITE);
     fs << "K1" << K1 << "D1" << D1;
     fs << "K2" << K2 << "D2" << D2;
     fs << "R" << R << "T" << T;
     fs.release();
 
-    cout << "Settings saved in 'stereo_calib.xml'" << endl;
+    cout << "Settings saved in 'calibration/stereo_calib.xml'" << endl;
 }
 
 void capture_frames(){

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(camera_stereo_calibration)
+project(calibration_package)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -8,16 +8,25 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(OpenCV REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 include_directories(include)
-add_executable(camera_stereo_calibration_exe src/camera_stereo_calibration_node.cpp)
-ament_target_dependencies(camera_stereo_calibration_exe rclcpp)
+include_directories(${OpenCV_INCLUDE_DIRS})
+
+add_executable(calibration_exe src/calibration_node.cpp)
+
+ament_target_dependencies(calibration_exe rclcpp)
+
 install(TARGETS
-  camera_stereo_calibration_exe
+  calibration_exe
   DESTINATION lib/${PROJECT_NAME}
+)
+
+target_link_libraries(calibration_exe
+  ${OpenCV_LIBS}
 )
 
 if(BUILD_TESTING)
