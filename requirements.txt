@@ -1,5 +1,0 @@
-opencv-python
-torch
-ultralytics
-cv-bridge
-serial
