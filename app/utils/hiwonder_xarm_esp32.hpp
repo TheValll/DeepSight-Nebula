@@ -23,7 +23,8 @@ public:
     void open_hiwonder();
     
     void ready_position();
-    void get_servos_positions();
+    void default_position();
+    // void get_servos_positions();
 
 private:
     std::string port_name;
