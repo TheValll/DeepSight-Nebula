@@ -449,6 +449,39 @@ I performed a significant technical migration to optimize the workflow.
 
 ---
 
+### 🗓️ 27/12/2025
+
+Quick recap of the last few days.
+
+---
+
+🎓 I finished my **Mathematics for Machine Learning and Data Science specialization** certification ([link](https://www.linkedin.com/feed/update/urn:li:activity:7409033718398472192/)), so I will have much more time for the project's progress.
+
+📸 I developed a C++ node to calibrate my stereo camera with a chessboard and receive a calibration matrix as output.
+
+🔄 I will probably change the ROS2 version, moving from Humble to **Jazzy** for update reasons with MoveIt and other stuff. I might also consider buying ROS2 courses like [this one on Udemy](https://www.udemy.com/course/ros2-for-beginners/?couponCode=DEC_25).
+
+🤖 I followed a quick MoveIt crash course ([video](https://www.youtube.com/watch?v=-xDyxxRiW7M)) to get a general overview of the library, and it's simpler than I thought. I will have to rebuild my URDF file without the gripper because you can easily integrate one with MoveIt, so I can remove the `mimic_joint` problem. Thanks again **Edouard Renard** for this course!
+
+🎯 With the MoveIt API, I understand that I could transmit my current robot position but also a "goal" position obtained via YOLO. I'll probably be able to do real-time finally and make my robot avoid my hand, for example, with the depth map.
+
+⚡ With my dual-boot, I was able to install **ROCm** very easily with my AMD card and I can easily run a YOLO model with very good performance!
+
+📝 I also merged this README with the `app` folder README in the [Environment Setup](#-environment-setup) section, written only in English.
+
+✉️ I contacted **Edouard Renard** to have an exchange with him if possible and get answers to many questions!
+
+---
+
+### 🔜 Next Steps
+
+- **Rethink my ROS2 architecture once more**: (I've hardly developed and mostly did learning and design, but it saves me huge amounts of time for later and avoids being in a situation where I spent 5 days developing a feature for nothing).
+- **Hardware**: I will soon have my readjusted camera mount.
+- **Electronics**: Start some electronics courses (With my STI2D background in energy and environment, I shouldn't have too much trouble getting back into it).
+- **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
+
+---
+
 # 🤖✨ DeepSight-Nebula - 🇫🇷
 
 **DeepSight-Nebula est un projet alliant Robotique & Intelligence Artificielle.**
@@ -777,5 +810,38 @@ J'ai effectué une migration technique importante pour optimiser le flux de trav
 - Développer un node ROS2 pour la calibration de la caméra.
 - Créer un node permettant de localiser un objet en 3D via le modèle **YOLO** (que j'ai déjà expérimenté), mais cette fois-ci implémenté en C++.
 - Réécrire le **README** dans le dossier `app` pour expliquer toutes les procédures d'installation du projet.
+
+---
+
+### 🗓️ 27/12/2025
+
+Petit recap de ces derniers jours.
+
+---
+
+🎓 J'ai terminé ma certification **Mathematics for Machine Learning and Data Science specialization** ([voir ici](https://www.linkedin.com/feed/update/urn:li:activity:7409033718398472192/)), je vais donc avoir beaucoup plus de temps pour l'avancement du projet.
+
+📸 J'ai développé un node C++ me permettant de calibrer ma caméra stéréo avec un _chessboard_ et recevoir une matrice de calibration en output.
+
+🔄 Je vais sûrement changer de version ROS2, passer de Humble à **Jazzy** pour des raisons de mise à jour avec MoveIt et d'autres stuff. Je vais également peut-être partir sur l'achat de cours ROS2 comme [celui-ci sur Udemy](https://www.udemy.com/course/ros2-for-beginners/?couponCode=DEC_25).
+
+🤖 J'ai suivi un _crash course_ rapide de MoveIt ([vidéo](https://www.youtube.com/watch?v=-xDyxxRiW7M)) afin d'avoir un point de vue général sur la bibliothèque et celle-ci est plus simple que je le pensais. Je vais devoir reconstruire mon fichier URDF sans le gripper car on peut en intégrer un facilement avec MoveIt donc je peux retirer le problème de `mimic_joint`. Merci encore **Edouard Renard** pour ce cours !
+
+🎯 Avec l'API de MoveIt, j'ai cru comprendre que je pouvais transmettre la position de mon robot actuelle mais aussi une position _goal_ que j'aurais obtenue via YOLO. Je vais sûrement pouvoir faire du temps réel finalement et faire en sorte que mon robot évite ma main par exemple avec la _depth map_.
+
+⚡ Avec mon dual-boot, j'ai pu installer très facilement **ROCm** avec ma carte AMD et je peux facilement faire tourner un modèle YOLO avec une très bonne performance !
+
+📝 J'ai également fusionné ce README avec le readme du dossier `app` dans la section [Environment Setup](#-environment-setup) uniquement écrite en anglais.
+
+✉️ J'ai pris contact avec **Edouard Renard** afin d'avoir un échange avec lui si possible et avoir des réponses à plein de questions !
+
+---
+
+### 🔜 Prochaines étapes
+
+- **Repenser encore une fois mon architecture ROS2** : (Je n'ai pratiquement pas développé et fait essentiellement de l'apprentissage et de la conception mais ça me fait gagner un temps énorme pour la suite et ça m'évite de me retrouver dans la situation où j'ai passé 5 jours à développer une feature pour rien).
+- **Hardware** : Je vais bientôt avoir mon support de caméra réajusté.
+- **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
+- **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
 
 ---
