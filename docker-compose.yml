@@ -13,14 +13,14 @@ services:
     privileged: true
     network_mode: host
     group_add:
-      - "985" #getent group uucp | cut -d: -f3
+      - "984" #getent group uucp | cut -d: -f3
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - /dev:/dev
-      - /home/${USER}/DeepSight-Nebula/:/ros2_ws
+      - /home/${USER}/Documents/DeepSight-Nebula/:/ros2_ws
       - /tmp/.X11-unix:/tmp/.X11-unix
     stdin_open: true
     tty: true

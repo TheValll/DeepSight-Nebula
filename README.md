@@ -46,7 +46,7 @@ This project was developed on an **Arch Linux** environment using Docker.
 #### 1. Build the Docker image
 
 ```bash
-docker compose build
+docker-compose build
 ```
 
 #### 2. Allow X11 display access (for GUI)
@@ -58,7 +58,7 @@ xhost +local:docker
 #### 3. Start the container
 
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 #### 4. Enter the container
