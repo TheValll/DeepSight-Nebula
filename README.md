@@ -484,8 +484,10 @@ Quick recap of the last few days.
 
 🖨️ I finished printing the mount for my stereo camera:
 
-![Support image](schemas/schema13.webp)
-![Support image](schemas/schema14.webp)
+![Image support](schemas/schema11.webp)
+![Image support](schemas/schema12.webp)
+![Image support](schemas/schema13.webp)
+![Image support](schemas/schema14.webp)
 
 💻 I developed a mini C++ library allowing me to control my robot at the hardware level.
 
@@ -870,6 +872,8 @@ Petit recap de ces derniers jours.
 
 🖨️ J'ai terminé l'impression de mon support pour ma caméra stéréo :
 
+![Image support](schemas/schema11.webp)
+![Image support](schemas/schema12.webp)
 ![Image support](schemas/schema13.webp)
 ![Image support](schemas/schema14.webp)
 
