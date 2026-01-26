@@ -480,6 +480,28 @@ Quick recap of the last few days.
 - **Electronics**: Start some electronics courses (With my STI2D background in energy and environment, I shouldn't have too much trouble getting back into it).
 - **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
 
+### 🗓️ 26/01/2026
+
+🖨️ I finished printing the mount for my stereo camera:
+
+![Support image](schemas/schema13.webp)
+![Support image](schemas/schema14.webp)
+
+💻 I developed a mini C++ library allowing me to control my robot at the hardware level.
+
+⚡ I was able to link this library to create a script that performs a basic movement while launching the camera feed in parallel (I still need to implement the YOLO model into this script).
+
+![Demonstration of a simple movement](schemas/schema15.gif)
+
+🧠 I rethought my ROS2 architecture by taking into account how MoveIt and ros2_control work, which allows me to have a much simpler logic than the initial one.
+
+![Support image](schemas/schema16.png)
+
+### 🔜 Prochaines étapes
+
+- **Hardware**: I will soon have my readjusted camera mount.
+- **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
+
 ---
 
 # 🤖✨ DeepSight-Nebula - 🇫🇷
@@ -844,4 +866,24 @@ Petit recap de ces derniers jours.
 - **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
 - **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
 
----
+### 🗓️ 26/01/2026
+
+🖨️ J'ai terminé l'impression de mon support pour ma caméra stéréo :
+
+![Image support](schemas/schema13.webp)
+![Image support](schemas/schema14.webp)
+
+💻 J'ai développé une mini librairie en C++ me permettant de contrôler mon robot directement via le hardware.
+
+⚡ J'ai pu associer cette librairie pour créer un script permettant d'effectuer un mouvement basique tout en lançant en parallèle l'ouverture de la caméra (il me reste à implémenter le modèle YOLO à ce script).
+
+![Demonstration d'un mouvement simple](schemas/schema15.gif)
+
+🧠 J'ai repensé mon architecture ROS2 en prenant en compte le fonctionnement de MoveIt et de ros2_control, ce qui me permet d'avoir une logique beaucoup plus simple que celle de départ.
+
+![Image support](schemas/schema16.png)
+
+### 🔜 Prochaines étapes
+
+- **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
+- **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
