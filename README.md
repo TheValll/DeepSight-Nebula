@@ -30,54 +30,13 @@
 
 ## 🔧 Environment Setup
 
-This project was developed on an **Arch Linux** environment using Docker.
+This project was developed on an **Ubuntu Linux** environment.
 
 > **⚠️ Important Note for macOS and Windows Users:**
 > To access hardware devices (USB cameras, serial ports) inside the container, you must use **Native Linux**.
 > On macOS or Windows, Docker Desktop runs in a virtual machine that does not automatically support USB passthrough. You may need to use a dedicated VM (like UTM or VirtualBox) with USB passthrough enabled to make this work.
 
-### Prerequisites
-
-- **Linux:** Docker Engine (Native) & Docker Compose
-- **macOS/Windows:** Not officially supported for hardware interaction without advanced VM configuration.
-
 ### Installation & Execution
-
-#### 1. Build the Docker image
-
-```bash
-docker-compose build
-```
-
-#### 2. Allow X11 display access (for GUI)
-
-```bash
-xhost +local:docker
-```
-
-#### 3. Start the container
-
-```bash
-docker-compose up -d
-```
-
-#### 4. Enter the container
-
-Open a new terminal and run:
-
-```bash
-docker exec -it ros2_dev_env bash
-```
-
-#### 5. Build the ROS 2 project
-
-Inside the container:
-
-```bash
-cd app
-colcon build
-source install/setup.bash
-```
 
 ## 📦 ROS 2 Packages Documentation
 
@@ -431,7 +390,6 @@ I finished the Blender tutorial and was able to perform my first test print for 
 
 I performed a significant technical migration to optimize the workflow.
 
-- **ArchLinux Dual-boot**: I switched to ArchLinux in dual-boot to facilitate passing devices through to the Docker container used for development.
 - **Transition to C++**: I decided to develop the core of the project in C++ (with a few Python scripts).
   - _Goal_: To achieve better real-time performance and deepen my mastery of this language, unlike Python which I have used daily for over 2 years in my work-study program.
   - _Training_: I refreshed my C++ skills using tutorials and Gemini's help to unblock complex errors related to Linux or the language itself.
@@ -499,10 +457,38 @@ Quick recap of the last few days.
 
 ![Support image](schemas/schema16.png)
 
+---
+
 ### 🔜 Prochaines étapes
 
 - **Hardware**: I will soon have my readjusted camera mount.
 - **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
+
+### 🗓️ 01/26/2026
+
+A quick recap of the past few months.
+
+---
+
+🎓 I have completed **Edouard Renard's** ROS2 courses, covering ROS2 basics, `ros2_control`, and **MoveIt2**. Consequently, the project will transition to **ROS2 Jazzy** instead of Humble.
+
+🦀 I’ve started learning **Rust**, which I expect to be highly beneficial for future developments.
+
+🤖 My `hiwonder_xarm_esp32` package is now finished. The robot can finally be visualized in **RViz2** with correct joints and limits.
+Since my gripper uses a parallel mechanism (deformable parallelogram), URDF does not support the resulting closed-loop joints. The solution I adopted was to implement a `prismatic joint` to simulate the opening of the claws. It looks a bit unusual visually, but it works. This was a challenging step to understand and implement, but I made it happen.
+
+⚙️ During the MoveIt course, I realized that my method for connecting to the hardware was far from optimal. Currently, the servos are connected to an ESP32 controller running a MicroPython script. The current architecture (My Command → MicroPython processes/formats to Hex → Sent via UART → Servos move) introduces significant latency.
+
+⚡ **Firmware Optimization:** I plan to rewrite the board's firmware to implement **USB Passthrough**. This will allow me to send commands directly in hexadecimal (having retrieved the original code via Thonny to understand the structure). By removing the MicroPython dependency, I expect a major performance boost. I intend to run an "after-optimization" benchmark to measure the gain. I haven't decided yet whether to write this firmware in C or Rust.
+
+🎯 **AI & MoveIt Goals:** The next step is to configure the `moveit_config` package using a _mock component_ while I build the actual firmware and driver. On the AI side, I will start writing a node to capture images from my calibrated camera, detect objects, and send a goal position to MoveIt via topics. I still need to figure out how to automate the gripper's opening and closing, as I haven't covered that in the course yet.
+
+---
+
+### 🔜 Next Steps
+
+- **Electronics**: Start basic electronics courses (given my background in STI2D - Energy and Environment, diving back into this shouldn't be too difficult).
+- **Training**: Taking a short break to practice math, Rust, and this project. Afterward, I will start the ML and DL certifications from DeepLearning.AI. The SLAM and Nav2 sections of ROS will come later.
 
 ---
 
@@ -819,7 +805,6 @@ J'ai terminé le tutoriel Blender et j'ai pu effectuer mon premier test d'impres
 
 J'ai effectué une migration technique importante pour optimiser le flux de travail.
 
-- **Dual-boot ArchLinux** : Je suis passé sur ArchLinux en dual-boot pour faciliter la transmission des périphériques (_devices_) vers le conteneur Docker utilisé pour le développement.
 - **Transition vers le C++** : J'ai pris la décision de développer le cœur du projet en C++ (avec quelques scripts Python).
   - _Objectif_ : Obtenir de meilleures performances en temps réel et approfondir ma maîtrise de ce langage, contrairement à Python que j'utilise quotidiennement depuis plus de 2 ans en alternance.
   - _Formation_ : Je me suis remis à niveau en C++ grâce à des tutoriels et à l'aide de Gemini pour débloquer certaines erreurs complexes sous Linux ou liées au langage.
@@ -887,7 +872,35 @@ Petit recap de ces derniers jours.
 
 ![Image support](schemas/schema16.png)
 
+---
+
 ### 🔜 Prochaines étapes
 
 - **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
 - **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
+
+### 🗓️ 26/01/2026
+
+Petit récap de ces derniers mois.
+
+---
+
+🎓 J'ai terminé les cours ROS2 de **Edouard Renard** comprenant les bases de ROS2, `ros2_control` et **MoveIt2**. Mon projet va officiellement basculer sur **ROS2 Jazzy** au lieu de Humble.
+
+🦀 J'ai débuté mon apprentissage de **Rust**, ce qui me sera d'une grande utilité pour la suite du développement.
+
+🤖 Mon package `hiwonder_xarm_esp32` est terminé. On peut désormais visualiser le robot dans **RViz2** avec les bons joints et les limites configurées.
+Étant donné que mon gripper est un modèle parallèle avec un mécanisme de parallélogramme déformable, l'URDF ne supporte pas les boucles fermées de joints. La solution adoptée a été de créer un `prismatic joint` pour simuler l'ouverture des pinces. C'est visuellement particulier, mais parfaitement fonctionnel. C'était une étape complexe à mettre en place, mais j'y suis parvenu.
+
+⚙️ J'ai remarqué durant le cours sur MoveIt que ma méthode de connexion au hardware n'était pas optimale. Actuellement, les servos sont pilotés via un programme MicroPython sur la carte contrôleur, ce qui génère de la latence (Commande → MicroPython → Formatage Hexa → UART → Servos).
+
+⚡ **Optimisation Firmware :** Je vais changer le firmware de la carte pour faire de l'**USB Passthrough**. Cela me permettra d'envoyer directement mes commandes en hexadécimal (code récupéré via Thonny) sans dépendre de MicroPython, avec un gain de performance significatif. Je prévois de réaliser un benchmark "avant/après". J'hésite encore entre le C et le Rust pour l'écriture de ce nouveau firmware.
+
+🎯 **Objectifs IA & MoveIt :** La prochaine étape consiste à configurer le package `moveit_config` avec un _mock component_ en attendant le firmware définitif. Côté IA, je vais développer un node pour capturer les images de ma caméra calibrée, détecter l'objet via YOLO et envoyer une position cible à MoveIt. Il me reste à approfondir l'automatisation de l'ouverture/fermeture de la pince via l'API MoveIt.
+
+---
+
+### 🔜 Prochaines étapes
+
+- **Électronique** : Commencer quelques cours d'électronique (avec mon bac STI2D spécialité Énergie et Environnement, les bases devraient revenir rapidement).
+- **Formation** : Petite pause pour pratiquer les mathématiques, Rust et avancer sur ce projet. Je reprendrai ensuite avec les certifications ML et DL de DeepLearning.AI. Les parties SLAM et Nav2 de ROS arriveront dans un second temps.
