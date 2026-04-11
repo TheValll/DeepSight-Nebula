@@ -438,6 +438,8 @@ Quick recap of the last few days.
 - **Electronics**: Start some electronics courses (With my STI2D background in energy and environment, I shouldn't have too much trouble getting back into it).
 - **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
 
+---
+
 ### 🗓️ 26/01/2026
 
 🖨️ I finished printing the mount for my stereo camera:
@@ -463,6 +465,8 @@ Quick recap of the last few days.
 
 - **Hardware**: I will soon have my readjusted camera mount.
 - **Training**: Proceed with purchasing **Edouard Renard's** courses; the first free courses on his channel have already helped me ENORMOUSLY to progress and learn, so I don't want to change.
+
+---
 
 ### 🗓️ 01/26/2026
 
@@ -853,6 +857,8 @@ Petit recap de ces derniers jours.
 - **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
 - **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
 
+---
+
 ### 🗓️ 26/01/2026
 
 🖨️ J'ai terminé l'impression de mon support pour ma caméra stéréo :
@@ -878,6 +884,8 @@ Petit recap de ces derniers jours.
 
 - **Électronique** : Commencer quelques cours d'électronique (Avec mon bac STI2D spécialité énergie et environnement, je ne devrais pas trop avoir de problème à me replonger là-dedans).
 - **Formation** : Partir sur l'achat des cours de **Edouard Renard**, les premiers cours gratuits disponibles sur sa chaîne m'ont déjà ENORMÉMENT aidé à avancer et apprendre donc je ne veux pas changer.
+
+---
 
 ### 🗓️ 26/01/2026
 
