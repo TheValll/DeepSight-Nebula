@@ -81,17 +81,17 @@ source install/setup.bash
 
 ## 📦 ROS 2 Packages Documentation
 
-### 1. xArm32 URDF Description
+### 1. Hiwonder xArm ESP32 URDF Description
 
-This folder contains the URDF description of the xArm32 robot for ROS 2 Humble, including Gazebo models.
+This folder contains the URDF description of the Hiwonder xArm ESP32 robot for ROS 2 Humble, including Gazebo models.
 
 #### Launch visualization:
 
 ```bash
-ros2 launch urdf_tutorial display.launch.py model:=/ros2_ws/app/src/xArm32_urdf_description/urdf/xArm32_urdf.xacro
+ros2 launch hiwonder_xarm_esp32_description display.launch.xml
 ```
 
-### 2. Calibration Package
+### 2. Stereo Camera Calibration
 
 This package contains an application to calibrate a stereo camera.
 
@@ -103,7 +103,7 @@ This package contains an application to calibrate a stereo camera.
 Configuration: If your chessboard dimensions differ, please modify the configuration in:
 
 ```bash
-app/src/calibration_package/include/calibration_package/calibration_node.hpp
+app/src/stereo_camera_calibration/include/stereo_camera_calibration/calibration_node.hpp
 ```
 
 #### Usage
@@ -111,7 +111,7 @@ app/src/calibration_package/include/calibration_package/calibration_node.hpp
 Run the calibration node:
 
 ```bash
-ros2 run calibration_package calibration_exe
+ros2 run stereo_camera_calibration calibration_exe
 ```
 
 #### How it works
@@ -366,7 +366,7 @@ Creating the robot's digital twin in ROS2 was a major and complex step.
 - **Solution**: After 3 days of searching, I found a [GitHub issue](https://github.com/syuntoku14/fusion2urdf/issues/78) describing the same problem.
   - A big thank you to **Colin Fuelberth** ([@Infinite-Echo](https://github.com/Infinite-Echo)) who forked and adapted the script to support "as-built" joints!
   - **Script used**: [Infinite-Echo/ROS2_fusion2URDF](https://github.com/Infinite-Echo/ROS2_fusion2URDF/tree/URDF_Exporter_asBuilt_Support)
-- **Result**: I was finally able to export a complete ROS2 package with a `.xacro` file that describes my robot arm, which is in the `modelisations/robot/xArm32_description` folder. This URDF does not include the gripper's opening and closing. I will adapt it when the time comes; the main goal was to have the basics and learn the Fusion software.
+- **Result**: I was finally able to export a complete ROS2 package with a `.xacro` file that describes my robot arm, which is in the `modelisations/robot/hiwonder_xarm_esp32_description` folder. This URDF does not include the gripper's opening and closing. I will adapt it when the time comes; the main goal was to have the basics and learn the Fusion software.
 
 ---
 
@@ -754,7 +754,7 @@ La création du jumeau numérique du robot dans ROS2 a été une étape majeure 
 - **Solution** : Après 3 jours de recherches, j'ai trouvé une [issue GitHub](https://github.com/syuntoku14/fusion2urdf/issues/78) décrivant le même problème.
   - Un grand merci à **Colin Fuelberth** ([@Infinite-Echo](https://github.com/Infinite-Echo)) qui a forké et adapté le script pour supporter les joints "as-built" !
   - **Script utilisé** : [Infinite-Echo/ROS2_fusion2URDF](https://github.com/Infinite-Echo/ROS2_fusion2URDF/tree/URDF_Exporter_asBuilt_Support)
-- **Résultat** : J'ai enfin pu exporter un package ROS2 complet avec un fichier `.xacro` qui décrit mon bras robot qui se trouve dans le dossier `modelisations/robot/xArm32_description`. Ce URDF ne prend pas en compte la fermeture et l'ouverture de la pince. Je l'adapterai au moment venu, l'objectif premier était d'avoir les bases et d'apprendre le logiciel Fusion.
+- **Résultat** : J'ai enfin pu exporter un package ROS2 complet avec un fichier `.xacro` qui décrit mon bras robot qui se trouve dans le dossier `modelisations/robot/hiwonder_xarm_esp32_description`. Ce URDF ne prend pas en compte la fermeture et l'ouverture de la pince. Je l'adapterai au moment venu, l'objectif premier était d'avoir les bases et d'apprendre le logiciel Fusion.
 
 ---
 
