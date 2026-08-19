@@ -74,4 +74,53 @@
     <child link="camera_link"/>
   </joint>
 
+  <!-- ==================== STEREO SENSORS (Gazebo) ==================== -->
+  <!-- One lens per cover window, centered in each hole, 1 mm outside the box.
+       Gazebo cameras look along +X of the sensor frame, while the mount optical
+       axis is +Z of camera_support_link, hence the rpy below (X_lens = Z_support,
+       Z_lens = Y_support, Y_lens = X_support). Left lens = +X of the support. -->
+
+  <xacro:macro name="camera_lens" params="side x_pos">
+    <link name="camera_${side}_lens_link">
+      <visual>
+        <origin xyz="-0.004 0.0 0.0" rpy="0.0 ${pi/2} 0.0"/>
+        <geometry>
+          <cylinder radius="0.007" length="0.008"/>
+        </geometry>
+        <material name="PrintedBlack"/>
+      </visual>
+    </link>
+
+    <joint name="camera_${side}_lens_to_camera_support_joint" type="fixed">
+      <origin xyz="${x_pos} 0.0 0.032" rpy="0.0 ${-pi/2} ${-pi/2}"/>
+      <parent link="camera_support_link"/>
+      <child link="camera_${side}_lens_link"/>
+    </joint>
+
+    <gazebo reference="camera_${side}_lens_link">
+      <sensor name="${side}_camera" type="camera">
+        <update_rate>60.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <topic>${side}_camera/image_raw</topic>
+        <camera>
+          <!-- ELP-USB960P2CAM-V90, OV9750, HFOV ~77 deg, 1280x720 per eye at 60 fps -->
+          <horizontal_fov>1.344</horizontal_fov>
+          <image>
+            <width>1280</width>
+            <height>720</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:camera_lens side="left" x_pos="0.03025"/>
+  <xacro:camera_lens side="right" x_pos="-0.03025"/>
+
 </robot>
