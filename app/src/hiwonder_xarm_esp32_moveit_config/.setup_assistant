@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: hiwonder_xarm_esp32_description
+    relative_path: urdf/hiwonder_esp32.urdf.xacro
+  srdf:
+    relative_path: config/hiwonder_esp32.srdf
+  package_settings:
+    author_name: Valentin Massonniere
+    author_email: contact@valentin-massonniere.ch
+    generated_timestamp: 1787169399
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity

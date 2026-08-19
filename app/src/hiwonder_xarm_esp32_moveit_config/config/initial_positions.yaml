@@ -1,0 +1,9 @@
+# Default initial positions for hiwonder_esp32's ros2_control fake system
+
+initial_positions:
+  gripper_left_joint: 0
+  limb1_to_base_link_joint: 0
+  limb2_to_limb1_joint: 0
+  limb3_to_limb2_joint: 0
+  limb4_to_limb3_joint: 0
+  limb5_to_limb4_joint: 0
