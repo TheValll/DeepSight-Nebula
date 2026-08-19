@@ -480,3 +480,73 @@ the foundations for the PhD application.
 - Finalize the `moveit_config` package with a mock component.
 - Write the YOLO → MoveIt goal-pose node.
 - Keep the wiki and review system running in parallel with implementation work.
+
+---
+
+### 2026-08-19 — Exams, Rust consolidation, and firmware reverse engineering
+
+These last months were mostly taken by my exams and a summer break, so development slowed down. What progress there
+was went into Rust and into the ESP32 firmware.
+
+- **Rust — book finished.** I finished reading the official Rust book and its documentation, and consolidated it with
+  a few small side projects. The language now feels comfortable enough to commit to for the firmware rewrite, which
+  settles the C-versus-Rust question I left open in March.
+
+- **Firmware — protocol reverse-engineered.** I reverse-engineered the MicroPython code currently running on the
+  robot's ESP32 controller and decoded the serial message structure it sends to the servos. This was the last piece I
+  needed before writing the USB-passthrough firmware: now that the frame format is known, the host can build the same
+  bytes itself and the MicroPython layer disappears from the command path.
+
+**Message structure.** Every command sent to a servo is a single frame built as follows:
+
+| #   | Field      | Size         | Description                            |
+| --- | ---------- | ------------ | -------------------------------------- |
+| 1   | Header     | 2 bytes      | `0x55 0x55`                            |
+| 2   | Servo ID   | 1 byte       | `0x01` to `0x05`                       |
+| 3   | Length     | 1 byte       | Number of bytes remaining in the frame |
+| 4   | Command    | 1 byte       | Servo method — see the table below     |
+| 5   | Parameters | 0 to 4 bytes | Depends on the command                 |
+| 6   | Checksum   | 1 byte       | Frame checksum                         |
+
+**Command codes**, extracted from the MicroPython source:
+
+```python
+SERVO_MOVE_TIME_WRITE      = const(1)
+SERVO_MOVE_TIME_READ       = const(2)
+SERVO_MOVE_STOP            = const(12)
+SERVO_ID_WRITE             = const(13)
+SERVO_ID_READ              = const(14)
+SERVO_ANGLE_OFFSET_ADJUST  = const(17)
+SERVO_ANGLE_OFFSET_WRITE   = const(18)
+SERVO_ANGLE_OFFSET_READ    = const(19)
+SERVO_VIN_READ             = const(27)
+SERVO_POS_READ             = const(28)
+SERVO_OR_MOTOR_MODE_WRITE  = const(29)
+SERVO_LOAD_OR_UNLOAD_WRITE = const(31)
+```
+
+**Functions to rewrite in Rust.** On top of that frame format, these are the operations the new driver has to expose:
+
+| Function        | Description                                                          |
+| --------------- | -------------------------------------------------------------------- |
+| `run`           | Move one servo to a target position over a given duration            |
+| `stop`          | Stop a servo in motion                                               |
+| `run_mult`      | Move several servos at once                                          |
+| `get_position`  | Read the current position of a servo                                 |
+| `get_vin`       | Read the input voltage of a servo                                    |
+| `get_id`        | Read the ID of a servo                                               |
+| `get_offset`    | Read the stored angle offset                                         |
+| `set_id`        | Change the ID of a servo                                             |
+| `adjust_offset` | Adjust the angle offset                                              |
+| `save_offset`   | Save the offset in the servo memory                                  |
+| `set_mode`      | Switch a servo between servo mode and continuous-rotation motor mode |
+| `load`          | Enable the servo torque                                              |
+| `unload`        | Disable the servo torque                                             |
+
+**Next steps.**
+
+- Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
+  before/after latency benchmark.
+- Finalize the `moveit_config` package with a mock component.
+- Write the YOLO → MoveIt goal-pose node.
+- Keep the wiki and review system running in parallel with implementation work.
