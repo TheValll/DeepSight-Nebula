@@ -1,0 +1,175 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- ==================== BASE ==================== -->
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.000251 0.036738 0.019525" rpy="0.0 0.0 0.0"/>
+      <mass value="1.020079"/>
+      <inertia ixx="5.790970e-03" iyy="1.673311e-03" izz="6.837773e-03" ixy="-8.404032e-06" iyz="5.366810e-04" ixz="5.531248e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/base.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/base_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ==================== ARM ==================== -->
+
+  <link name="limb1_link">
+    <inertial>
+      <origin xyz="-0.001842 0.007354 0.022686" rpy="0.0 0.0 0.0"/>
+      <mass value="0.376248"/>
+      <inertia ixx="1.468690e-04" iyy="1.368439e-04" izz="1.701225e-04" ixy="1.728264e-06" iyz="-1.953105e-05" ixz="4.878476e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.000088 -0.002467 -0.037808" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.000088 -0.002467 -0.037808" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb1_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="limb1_to_base_link_joint" type="revolute">
+    <origin xyz="-0.000088 0.002467 0.037808" rpy="0.0 0.0 0.0"/>
+    <parent link="base_link"/>
+    <child link="limb1_link"/>
+    <axis xyz="0.0 0.0 -1.0"/>
+    <limit lower="-2.793" upper="2.793" effort="10" velocity="2.0"/>
+  </joint>
+
+  <link name="limb2_link">
+    <inertial>
+      <origin xyz="-0.022655 0.034807 0.038534" rpy="0.0 0.0 0.0"/>
+      <mass value="0.219799"/>
+      <inertia ixx="2.325983e-04" iyy="1.959224e-04" izz="1.748409e-04" ixy="5.157288e-07" iyz="-1.040993e-04" ixz="5.750093e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.023557 -0.003681 -0.068592" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.023557 -0.003681 -0.068592" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb2_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="limb2_to_limb1_joint" type="revolute">
+    <origin xyz="0.023645 0.001214 0.030784" rpy="0.733037 0.001213 0.000165"/>
+    <parent link="limb1_link"/>
+    <child link="limb2_link"/>
+    <axis xyz="-1.0 -0.0017 0.0004"/>
+    <limit lower="-2.094" upper="2.094" effort="17" velocity="2.7"/>
+  </joint>
+
+  <link name="limb3_link">
+    <inertial>
+      <origin xyz="0.017608 -0.025096 0.029125" rpy="0.0 0.0 0.0"/>
+      <mass value="0.449449"/>
+      <inertia ixx="6.118410e-04" iyy="3.338003e-04" izz="3.278646e-04" ixy="5.996446e-07" iyz="2.867923e-04" ixz="-6.464974e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.020292 -0.071081 -0.143145" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb3.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.020292 -0.071081 -0.143145" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb3_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="limb3_to_limb2_joint" type="revolute">
+    <origin xyz="-0.043849 0.067400 0.074553" rpy="-1.518436 0.0 0.0"/>
+    <parent link="limb2_link"/>
+    <child link="limb3_link"/>
+    <axis xyz="1.0 -0.001 0.0007"/>
+    <limit lower="-2.094" upper="2.094" effort="17" velocity="2.7"/>
+  </joint>
+
+  <link name="limb4_link">
+    <inertial>
+      <origin xyz="0.020638 -0.033182 -0.008675" rpy="0.0 0.0 0.0"/>
+      <mass value="0.258047"/>
+      <inertia ixx="9.125036e-05" iyy="7.224678e-05" izz="7.967461e-05" ixy="1.361791e-06" iyz="-8.812793e-06" ixz="3.288307e-07"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.025163 -0.012803 -0.205803" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb4.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.025163 -0.012803 -0.205803" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb4_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="limb4_to_limb3_joint" type="revolute">
+    <origin xyz="-0.004871 -0.058278 0.062658" rpy="-0.785398 0.0 0.0"/>
+    <parent link="limb3_link"/>
+    <child link="limb4_link"/>
+    <axis xyz="-1.0 0.0012 0.0002"/>
+    <limit lower="-2.094" upper="2.094" effort="17" velocity="2.7"/>
+  </joint>
+
+  <!-- ==================== WRIST (limb5 = gripper base) ==================== -->
+
+  <link name="limb5_link">
+    <inertial>
+      <origin xyz="0.013215 -0.028007 -0.008817" rpy="0.0 0.0 0.0"/>
+      <mass value="0.212537"/>
+      <inertia ixx="5.821128e-05" iyy="8.006153e-05" izz="6.587425e-05" ixy="6.329734e-06" iyz="-4.389587e-06" ixz="1.093490e-06"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.004362 0.039727 -0.205787" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb5.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="Steel"/>
+    </visual>
+    <collision>
+      <origin xyz="0.004362 0.039727 -0.205787" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/limb5_collision.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="limb5_to_limb4_joint" type="revolute">
+    <origin xyz="0.020801 -0.052531 0.0" rpy="-0.001296 1.134464 -0.000736"/>
+    <parent link="limb4_link"/>
+    <child link="limb5_link"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-1.571" upper="1.571" effort="25" velocity="2.6"/>
+  </joint>
+
+</robot>

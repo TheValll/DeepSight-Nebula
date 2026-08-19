@@ -5,4 +5,8 @@
     <color rgba="1.0 1.0 1.0 1.0"/>
   </material>
 
+  <material name="PrintedBlack">
+    <color rgba="0.15 0.15 0.15 1.0"/>
+  </material>
+
 </robot>

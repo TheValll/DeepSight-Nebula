@@ -1,0 +1,77 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==================== STEREO CAMERA MOUNT (3D printed) ==================== -->
+  <!-- Mesh frames (from modelisations/amount, mm) — X = stereo baseline (96 mm),
+       Y = height (46.5 mm, the two screw ears mark the bottom at -Y),
+       Z = optical axis (support back plate at Z=0, cover closes the box at Z=26).
+       The box lies on top of the limb4 bracket, centered on the wrist axis,
+       optical axis along the gripper direction (-Y of limb4).
+       Adjust the two properties below to fine-tune the real fit. -->
+
+  <xacro:property name="camera_mount_xyz" value="0.0208 -0.025 0.0255"/>
+  <xacro:property name="camera_mount_rpy" value="${pi/2} 0.0 0.0"/>
+
+  <link name="camera_support_link">
+    <inertial>
+      <origin xyz="0.0 0.0 0.013" rpy="0.0 0.0 0.0"/>
+      <mass value="0.060"/>
+      <inertia ixx="1.419e-05" iyy="4.946e-05" izz="5.689e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/camera_support.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="PrintedBlack"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.013" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.096 0.0465 0.026"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="camera_support_to_limb4_joint" type="fixed">
+    <origin xyz="${camera_mount_xyz}" rpy="${camera_mount_rpy}"/>
+    <parent link="limb4_link"/>
+    <child link="camera_support_link"/>
+  </joint>
+
+  <link name="camera_cover_link">
+    <inertial>
+      <origin xyz="0.0 0.0 0.0025" rpy="0.0 0.0 0.0"/>
+      <mass value="0.012"/>
+      <inertia ixx="2.187e-06" iyy="9.241e-06" izz="1.138e-05" ixy="0.0" iyz="0.0" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <mesh filename="package://hiwonder_xarm_esp32_description/meshes/camera_cover.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="PrintedBlack"/>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0025" rpy="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.096 0.0465 0.005"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="camera_cover_to_camera_support_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.026" rpy="0.0 0.0 0.0"/>
+    <parent link="camera_support_link"/>
+    <child link="camera_cover_link"/>
+  </joint>
+
+  <link name="camera_link"/>
+
+  <joint name="camera_link_to_camera_support_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.031" rpy="0.0 0.0 0.0"/>
+    <parent link="camera_support_link"/>
+    <child link="camera_link"/>
+  </joint>
+
+</robot>
