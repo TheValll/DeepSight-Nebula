@@ -486,7 +486,7 @@ the foundations for the PhD application.
 ### 2026-08-19 — Exams, Rust consolidation, and firmware reverse engineering
 
 These last months were mostly taken by my exams and a summer break, so development slowed down. What progress there
-was went into Rust and into the ESP32 firmware.
+was went into Rust, into the ESP32 firmware, and into the ROS2 side of the project (URDF and MoveIt).
 
 - **Rust — book finished.** I finished reading the official Rust book and its documentation, and consolidated it with
   a few small side projects. The language now feels comfortable enough to commit to for the firmware rewrite, which
@@ -543,10 +543,15 @@ SERVO_LOAD_OR_UNLOAD_WRITE = const(31)
 | `load`          | Enable the servo torque                                              |
 | `unload`        | Disable the servo torque                                             |
 
+- **URDF refactor.** I split the URDF description into three separate modules — arm, gripper, and camera. The camera
+  is now part of the model, with its STL mesh and the corresponding Gazebo camera sensors.
+
+- **MoveIt2 configuration.** The `moveit_config` package is now set up: the gripper is declared as the end effector,
+  and a mock component stands in for the real controllers until the new firmware and driver are ready. I can now plan
+  and execute a valid target position in RViz.
+
 **Next steps.**
 
 - Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
-  before/after latency benchmark.
-- Finalize the `moveit_config` package with a mock component.
+  before/after latency benchmark comparing it to the stock MicroPython firmware.
 - Write the YOLO → MoveIt goal-pose node.
-- Keep the wiki and review system running in parallel with implementation work.
