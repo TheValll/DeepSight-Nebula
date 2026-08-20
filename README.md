@@ -550,6 +550,8 @@ SERVO_LOAD_OR_UNLOAD_WRITE = const(31)
   and a mock component stands in for the real controllers until the new firmware and driver are ready. I can now plan
   and execute a valid target position in RViz.
 
+![MoveIt demo](schemas/schema17.gif)
+
 **Next steps.**
 
 - Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
