@@ -1,4 +1,5 @@
 #include <chrono>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -11,7 +12,7 @@ const int BAUD_RATE = 115200;
 const int ITERATIONS = 1000;
 const int WARMUP = 20;
 const int PAUSE_MS = 10;
-const std::string CSV_PATH = "benchmarks/micropython_latency.csv";
+
 
 int main() {
     try {
@@ -36,8 +37,13 @@ int main() {
             {"write", "bus_servo.run(1, " + current_pos + ", 1000); print('W')\r\n", "W"},
         };
 
+        char stamp[32];
+        std::time_t now = std::time(nullptr);
+        std::strftime(stamp, sizeof(stamp), "%Y-%m-%d_%Hh%M", std::localtime(&now));
+        const std::string csv_path = "benchmarks/" + std::string(stamp) + "_micropython_latency.csv";
+
         std::filesystem::create_directories("benchmarks");
-        std::ofstream csv(CSV_PATH);
+        std::ofstream csv(csv_path);
         csv << "scenario,iteration,roundtrip_us,response\n";
 
         for (const auto& s : scenarios) {
@@ -58,7 +64,7 @@ int main() {
         }
 
         csv.close();
-        std::cout << "Done: " << CSV_PATH << std::endl;
+        std::cout << "Done: " << csv_path << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error : " << e.what() << std::endl;
         return 1;
