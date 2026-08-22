@@ -18,7 +18,8 @@ public:
     int getBaudrate() const;
 
     void send_command(const std::string& command);
-    
+    std::string query(const std::string& command, const std::string& expect_prefix);
+
     void close_hiwonder();
     void open_hiwonder();
     

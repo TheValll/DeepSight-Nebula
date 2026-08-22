@@ -1,8 +1,10 @@
 #include "hiwonder_xarm_esp32.hpp"
 #include <iostream>
 #include <thread>
-#include <chrono> 
+#include <chrono>
 #include <vector>
+#include <termios.h>
+#include <unistd.h>
 
 using namespace boost; 
 
@@ -51,6 +53,47 @@ void Hiwonder::send_command(const std::string& command) {
     if (ec) {
         std::cerr << "Error writing to serial port: " << ec.message() << std::endl;
     }
+}
+
+std::string Hiwonder::query(const std::string& command, const std::string& expect_prefix) {
+    if (!serial_.is_open()) {
+        std::cerr << "Error serial port not open." << std::endl;
+        return "";
+    }
+
+    int fd = serial_.native_handle();
+
+    termios tio;
+    tcgetattr(fd, &tio);
+    tio.c_cc[VMIN] = 0;
+    tio.c_cc[VTIME] = 10;
+    tcsetattr(fd, TCSANOW, &tio);
+
+    tcflush(fd, TCIFLUSH);
+
+    system::error_code ec;
+    asio::write(serial_, asio::buffer(command), ec);
+    if (ec) {
+        std::cerr << "Error writing to serial port: " << ec.message() << std::endl;
+        return "";
+    }
+
+    std::string line;
+    char c;
+    while (::read(fd, &c, 1) == 1) {
+        if (c != '\n') {
+            line += c;
+            continue;
+        }
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.rfind(expect_prefix, 0) == 0) {
+            return line;
+        }
+        line.clear();
+    }
+    return "";  // timeout
 }
 
 void Hiwonder::close_hiwonder() {
