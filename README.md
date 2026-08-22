@@ -565,6 +565,8 @@ Today, I established the benchmarking process to measure the latency of both the
 
 The benchmarks measure the firmware processing time, as well as the time spent on USB and servo bus communication. 
 
+You can find the original Hiwonder firmware here: [Google Drive link](https://drive.google.com/drive/folders/1chAm2XyppydW-atGWoAcX0cv-8cct9qf?usp=sharing).
+
 I adapted my C++ driver to execute these three commands 1,000 times each:
 
 - print(1)
