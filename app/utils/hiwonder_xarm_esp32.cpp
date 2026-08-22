@@ -5,6 +5,7 @@
 #include <vector>
 #include <termios.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 using namespace boost; 
 
@@ -62,6 +63,8 @@ std::string Hiwonder::query(const std::string& command, const std::string& expec
     }
 
     int fd = serial_.native_handle();
+    
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK);
 
     termios tio;
     tcgetattr(fd, &tio);
