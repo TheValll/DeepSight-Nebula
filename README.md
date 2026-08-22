@@ -557,3 +557,40 @@ SERVO_LOAD_OR_UNLOAD_WRITE = const(31)
 - Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
   before/after latency benchmark comparing it to the stock MicroPython firmware.
 - Write the YOLO → MoveIt goal-pose node.
+
+
+### 2026-08-22 — MicroPython firmware benchmarks
+
+Today, I established the benchmarking process to measure the latency of both the Python and the upcoming Rust firmware implementations.
+
+The benchmarks measure the firmware processing time, as well as the time spent on USB and servo bus communication. 
+
+I adapted my C++ driver to execute these three commands 1,000 times each:
+
+- print(1)
+- Read position
+- Write position
+
+Here are the initial results for the stock Hiwonder MicroPython firmware:
+
+```text
+Read servo position ..................... 53.5 ms
+    ├─ MicroPython interpreter overhead .. ~51.0 ms
+    └─ USB + servo bus communication ..... ~2.5 ms
+
+Send move command ....................... 27.5 ms
+    ├─ MicroPython interpreter overhead .. ~26.5 ms
+    └─ USB + servo bus communication ..... ~1.0 ms
+```
+
+On top of the latency, position reads fail 23.6% of the time (236/1000 returned `False`) with the stock firmware.
+
+Conclusion. The time spent in the MicroPython interpreter is excessively high for real-time robotic control. This strongly reinforces my decision to rewrite the firmware in Rust with a direct USB passthrough.
+
+
+**Next steps.**
+
+- Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
+  before/after latency benchmark comparing it to the stock MicroPython firmware.
+- Write the YOLO → MoveIt goal-pose node.
+- Write the ros2_control package.
