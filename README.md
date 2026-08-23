@@ -619,6 +619,8 @@ I'll use AI to help me implement the Rust firmware, while learning how USB passt
 You can find the specifications here:
 `./rust_firmware/specs/DeepSight-Nebula_Rust_Firmware_Specification.md`
 
+**Next steps.**
+
 - Write the Rust firmware and driver implementing the frame format described above, then implement the USB passthrough firmware itself, with a before/after latency benchmark comparing it to the stock MicroPython firmware.
 - Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
 - Write the YOLO → MoveIt goal-pose node.
@@ -679,3 +681,9 @@ Build host frame ........................ 2.61 µs
 \* The floor and write measurements are useful references but are not strict end-to-end equivalents. MicroPython `print(1)` executes through the REPL, while Rust `host_floor` only builds a frame locally. The MicroPython write waits for a textual confirmation, while the Rust write ends when the host serial stack accepts the binary command.
 
 The Rust firmware reduces the mean end-to-end read latency by approximately 93.2% while eliminating all failures observed during this benchmark. This validates the decision to remove the MicroPython REPL and use a deterministic binary transport layer.
+
+**Next steps.**
+
+- Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
+- Write the YOLO → MoveIt goal-pose node.
+- Write the `ros2_control` package.
