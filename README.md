@@ -107,6 +107,16 @@ Run the calibration node:
 ros2 run stereo_camera_calibration calibration_exe
 ```
 
+##### 3. MoveIt2 Configuration
+
+This package contains the MoveIt2 configuration of the Hiwonder xArm ESP32.
+
+Launch MoveIt with RViz (planning + execution on the mock hardware):
+
+```bash
+ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py
+```
+
 ###### How it works
 
 1. The script uses VideoCapture (default index: 2) in the capture_frames function.
