@@ -9,3 +9,26 @@ install
 .vscode
 fusion360_xarm32.zip
 images
+
+# C and C++ compilation artifacts
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.d
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Legacy utility executables (compile new binaries inside build/)
+benchmark_micro_python_firmware
+test_hiwonder
+test_hiwonder_xarm_rust_driver
+test_hiwonder_xarm_rust_driver_hardware

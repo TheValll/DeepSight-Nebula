@@ -592,6 +592,11 @@ Read servo position ..................... 53.5 ms
 Send move command ....................... 27.5 ms
     ├─ MicroPython interpreter overhead .. ~26.5 ms
     └─ USB + servo bus communication ..... ~1.0 ms
+
+Execute print(1) ........................ 9.882 ms
+    ├─ Median latency .................... 9.924 ms
+    ├─ 95th percentile ................... 10.307 ms
+    └─ Successful operations ............. 100% (1,000/1,000)
 ```
 
 On top of the latency, position reads fail 23.6% of the time (236/1000 returned `False`) with the stock firmware.
@@ -618,3 +623,59 @@ You can find the specifications here:
 - Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
 - Write the YOLO → MoveIt goal-pose node.
 - Write the `ros2_control` package.
+
+
+### 2026-08-24 — Rust firmware
+
+I wrote the ESP32 firmware in Rust with the help of AI. This first embedded Rust project helped me understand the complete communication path, from the host serial port to the half-duplex servo bus.
+
+I also developed a new C++ host driver that covers the main features of the servo protocol:
+
+- **Motion control:** move a servo to a target position over a specified duration, stop an active movement, and read the last commanded position and duration.
+- **Servo feedback:** read the current position, input voltage, servo ID, and stored angle offset.
+- **Servo configuration:** change the servo ID, adjust and save the angle offset, and switch between servo and continuous-rotation motor modes.
+- **Torque and communication:** enable or disable torque, build and validate binary frames, verify checksums, handle response timeouts, and report protocol errors.
+
+
+I also prepared the Rust firmware benchmark using the same parameters as the MicroPython reference benchmark.
+
+Here are the initial results with the new Rust firmware:
+
+```text
+Read servo position ..................... 4.317 ms
+    ├─ Median latency .................... 4.299 ms
+    ├─ 95th percentile ................... 4.492 ms
+    └─ Successful operations ............. 100% (1,000/1,000)
+
+Send move command ....................... 22.25 µs
+    ├─ Median latency .................... 23 µs
+    ├─ 95th percentile ................... 25 µs
+    └─ Successful operations ............. 100% (1,000/1,000)
+
+Build host frame ........................ 2.61 µs
+    ├─ Median latency .................... 3 µs
+    ├─ 95th percentile ................... 3 µs
+    └─ Successful operations ............. 100% (1,000/1,000)
+```
+
+
+**Firmware comparison.** The position-read scenario is the most reliable direct comparison because it includes a complete request and response through the host serial link, ESP32, and servo bus.
+
+| Scenario | Metric | Stock MicroPython | Rust | Difference |
+|:---|:---|---:|---:|---:|
+| Floor | Mean | 9.882 ms | 2.61 µs | 3,786× faster* |
+| Floor | Median | 9.924 ms | 3 µs | 3,308× faster* |
+| Floor | P95 | 10.307 ms | 3 µs | 3,436× faster* |
+| Floor | Success rate | 100% | 100% | No failures |
+| Position read | Mean | 63.239 ms | 4.317 ms | 14.6× faster |
+| Position read | Median | 53.658 ms | 4.299 ms | 12.5× faster |
+| Position read | P95 | 96.180 ms | 4.492 ms | 21.4× faster |
+| Position read | Success rate | 76.4% | 100% | +23.6 points |
+| Move write | Mean | 27.393 ms | 22.25 µs | 1,231× faster* |
+| Move write | Median | 27.145 ms | 23 µs | 1,180× faster* |
+| Move write | P95 | 30.162 ms | 25 µs | 1,206× faster* |
+| Move write | Success rate | 100% | 100% | No failures |
+
+\* The floor and write measurements are useful references but are not strict end-to-end equivalents. MicroPython `print(1)` executes through the REPL, while Rust `host_floor` only builds a frame locally. The MicroPython write waits for a textual confirmation, while the Rust write ends when the host serial stack accepts the binary command.
+
+The Rust firmware reduces the mean end-to-end read latency by approximately 93.2% while eliminating all failures observed during this benchmark. This validates the decision to remove the MicroPython REPL and use a deterministic binary transport layer.
