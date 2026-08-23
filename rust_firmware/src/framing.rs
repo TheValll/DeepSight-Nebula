@@ -74,6 +74,11 @@ impl<const CAPACITY: usize> FrameDecoder<CAPACITY> {
         self.header_bytes = 0;
     }
 
+    /// Whether a possible header or frame is currently incomplete.
+    pub const fn is_collecting(&self) -> bool {
+        self.received != 0 || self.header_bytes != 0
+    }
+
     pub fn push(&mut self, byte: u8) -> PushResult<CAPACITY> {
         if self.received == 0 {
             return self.push_header(byte);
@@ -248,6 +253,48 @@ mod tests {
         let mut decoder = FrameDecoder::<16>::new();
         assert!(collect(&mut decoder, &MOVE[..5]).is_empty());
         decoder.reset();
+        assert_eq!(collect(&mut decoder, READ), [READ]);
+    }
+
+    #[test]
+    fn reports_whether_an_incomplete_frame_is_being_collected() {
+        let mut decoder = FrameDecoder::<16>::new();
+        assert!(!decoder.is_collecting());
+        decoder.push(0x55);
+        assert!(decoder.is_collecting());
+        decoder.reset();
+        assert!(!decoder.is_collecting());
+        assert_eq!(collect(&mut decoder, READ), [READ]);
+        assert!(!decoder.is_collecting());
+    }
+
+    #[test]
+    fn sustains_ten_thousand_back_to_back_frames() {
+        let mut decoder = FrameDecoder::<16>::new();
+        let mut completed = 0_u32;
+
+        for _ in 0..10_000 {
+            for &byte in READ {
+                if let PushResult::Frame(frame) = decoder.push(byte) {
+                    assert_eq!(frame.as_bytes(), READ);
+                    completed += 1;
+                }
+            }
+        }
+
+        assert_eq!(completed, 10_000);
+        assert!(!decoder.is_collecting());
+    }
+
+    #[test]
+    fn recovers_after_dense_noise_and_malformed_frames() {
+        let mut decoder = FrameDecoder::<16>::new();
+        let malformed = [
+            0xaa, 0x55, 0x00, 0x55, 0x55, 0x01, 0x00, 0xff, 0x55, 0x55, 0x01, 0x02,
+        ];
+
+        assert!(collect(&mut decoder, &malformed).is_empty());
+        decoder.reset(); // Models the 50 ms transport-level inactivity timeout.
         assert_eq!(collect(&mut decoder, READ), [READ]);
     }
 }

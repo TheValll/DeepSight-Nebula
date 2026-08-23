@@ -12,8 +12,10 @@ use esp_hal::Blocking;
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{Level, Output, OutputConfig};
 use esp_hal::main;
+use esp_hal::time::{Duration, Instant};
 use esp_hal::uart::{Config as UartConfig, Uart};
 use esp_println as _;
+use rust_firmware::diagnostics::FIRMWARE_COUNTERS;
 use rust_firmware::framing::{FrameDecoder, PushResult};
 
 // This creates a default app-descriptor required by the esp-idf bootloader.
@@ -23,24 +25,9 @@ esp_bootloader_esp_idf::esp_app_desc!();
 const HOST_BAUDRATE: u32 = 115_200;
 const SERVO_BAUDRATE: u32 = 115_200;
 const HOST_FRAME_CAPACITY: usize = 258;
+const HOST_FRAME_TIMEOUT: Duration = Duration::from_millis(50);
 const UART_CHUNK_SIZE: usize = 64;
 
-#[derive(Default)]
-struct Counters {
-    host_rx_errors: u32,
-    host_tx_errors: u32,
-    servo_rx_errors: u32,
-    servo_tx_errors: u32,
-    stale_servo_bytes: u32,
-    invalid_lengths: u32,
-    oversized_frames: u32,
-}
-
-/// Owns the two half-duplex direction signals.
-///
-/// The active-high polarity comes from the signal names in the current
-/// specification and must be checked on the physical controller before use
-/// with connected servos.
 struct BusDirection<'d> {
     tx_enable: Output<'d>,
     rx_enable: Output<'d>,
@@ -85,40 +72,36 @@ fn write_all(uart: &mut Uart<'_, Blocking>, mut bytes: &[u8]) -> Result<(), ()> 
     Ok(())
 }
 
-fn discard_stale_servo_bytes(servo_uart: &mut Uart<'_, Blocking>, counters: &mut Counters) {
+fn discard_stale_servo_bytes(servo_uart: &mut Uart<'_, Blocking>) {
     let mut discard = [0_u8; UART_CHUNK_SIZE];
 
     while servo_uart.read_ready() {
         match servo_uart.read(&mut discard) {
             Ok(count) => {
-                counters.stale_servo_bytes =
-                    counters.stale_servo_bytes.saturating_add(count as u32);
+                FIRMWARE_COUNTERS.stale_servo_bytes.add(count);
             }
             Err(_) => {
-                counters.servo_rx_errors = counters.servo_rx_errors.saturating_add(1);
+                FIRMWARE_COUNTERS.servo_rx_errors.increment();
                 break;
             }
         }
     }
 }
 
-fn forward_servo_bytes(
-    servo_uart: &mut Uart<'_, Blocking>,
-    host_uart: &mut Uart<'_, Blocking>,
-    counters: &mut Counters,
-) {
+fn forward_servo_bytes(servo_uart: &mut Uart<'_, Blocking>, host_uart: &mut Uart<'_, Blocking>) {
     let mut response = [0_u8; UART_CHUNK_SIZE];
 
     while servo_uart.read_ready() {
         match servo_uart.read(&mut response) {
             Ok(count) => {
                 if write_all(host_uart, &response[..count]).is_err() {
-                    counters.host_tx_errors = counters.host_tx_errors.saturating_add(1);
+                    FIRMWARE_COUNTERS.host_tx_errors.increment();
                     return;
                 }
+                FIRMWARE_COUNTERS.servo_bytes_forwarded.add(count);
             }
             Err(_) => {
-                counters.servo_rx_errors = counters.servo_rx_errors.saturating_add(1);
+                FIRMWARE_COUNTERS.servo_rx_errors.increment();
                 return;
             }
         }
@@ -154,12 +137,16 @@ fn main() -> ! {
 
     let mut decoder = FrameDecoder::<HOST_FRAME_CAPACITY>::new();
     let mut host_bytes = [0_u8; UART_CHUNK_SIZE];
-    let mut counters = Counters::default();
+    let mut last_host_activity = Instant::now();
 
     loop {
-        // Servo traffic has priority so a response is moved out of the UART2
-        // FIFO with minimal latency.
-        forward_servo_bytes(&mut servo_uart, &mut host_uart, &mut counters);
+        if decoder.is_collecting() && last_host_activity.elapsed() >= HOST_FRAME_TIMEOUT {
+            decoder.reset();
+            direction.receive();
+            FIRMWARE_COUNTERS.incomplete_frame_timeouts.increment();
+        }
+
+        forward_servo_bytes(&mut servo_uart, &mut host_uart);
 
         if !host_uart.read_ready() {
             core::hint::spin_loop();
@@ -169,23 +156,25 @@ fn main() -> ! {
         let received = match host_uart.read(&mut host_bytes) {
             Ok(received) => received,
             Err(_) => {
-                counters.host_rx_errors = counters.host_rx_errors.saturating_add(1);
+                FIRMWARE_COUNTERS.host_rx_errors.increment();
                 decoder.reset();
+                direction.receive();
                 continue;
             }
         };
 
         for &byte in &host_bytes[..received] {
+            last_host_activity = Instant::now();
             match decoder.push(byte) {
                 PushResult::Pending => {}
                 PushResult::InvalidLength(_) => {
-                    counters.invalid_lengths = counters.invalid_lengths.saturating_add(1);
+                    FIRMWARE_COUNTERS.invalid_lengths.increment();
                 }
                 PushResult::FrameTooLarge { .. } => {
-                    counters.oversized_frames = counters.oversized_frames.saturating_add(1);
+                    FIRMWARE_COUNTERS.oversized_frames.increment();
                 }
                 PushResult::Frame(frame) => {
-                    discard_stale_servo_bytes(&mut servo_uart, &mut counters);
+                    discard_stale_servo_bytes(&mut servo_uart);
 
                     direction.transmit();
                     let transmission = write_all(&mut servo_uart, frame.as_bytes())
@@ -194,7 +183,9 @@ fn main() -> ! {
                     direction.receive();
 
                     if transmission.is_err() {
-                        counters.servo_tx_errors = counters.servo_tx_errors.saturating_add(1);
+                        FIRMWARE_COUNTERS.servo_tx_errors.increment();
+                    } else {
+                        FIRMWARE_COUNTERS.frames_forwarded.increment();
                     }
                 }
             }

@@ -1,7 +1,7 @@
 # DeepSight-Nebula — Rust Firmware Specification
 
-**Status:** Draft  
-**Version:** 0.1  
+**Status:** Implemented, pending performance validation
+**Version:** 0.2
 **Date:** 2026-08-23
 
 ---
@@ -23,7 +23,7 @@ The communication chain is therefore:
 ```text
 Host PC
    │
-   │ USB / MicroPython REPL
+   │ USB serial (CH340 / UART0) / MicroPython REPL
    │ textual Python commands
    ▼
 ESP32 / MicroPython
@@ -49,8 +49,8 @@ The Rust firmware is intended to remove this additional software layer and provi
 The Rust firmware shall:
 
 - replace the current MicroPython firmware for servo communication;
-- expose the servo bus to the host through USB;
-- forward binary data between USB and UART2;
+- expose the servo bus to the host through the CH340/UART0 serial port;
+- forward binary data between UART0 and UART2;
 - correctly control the half-duplex direction of the servo bus;
 - minimize latency and jitter;
 - provide reliable buffered UART reception;
@@ -89,13 +89,13 @@ The Rust firmware is positioned between the host computer and the servo bus.
 │ Servo protocol encoding/decoding     │
 └──────────────────┬───────────────────┘
                    │
-                  USB
+           USB serial / UART0
                    │
                    ▼
 ┌──────────────────────────────────────┐
 │         ESP32 Rust Firmware           │
 │                                      │
-│ USB ↔ UART2 passthrough              │
+│ UART0 ↔ UART2 transport              │
 │ Half-duplex bus direction control    │
 │ Communication buffering              │
 └──────────────────┬───────────────────┘
@@ -128,9 +128,9 @@ The host is responsible for:
 
 The firmware is responsible for:
 
-- USB communication;
+- host UART0 communication through the CH340;
 - UART2 communication;
-- forwarding bytes between USB and UART2;
+- forwarding bytes between UART0 and UART2;
 - controlling TX/RX direction on the half-duplex bus;
 - buffering communication data;
 - handling transport-level communication failures.
@@ -147,9 +147,9 @@ The servos are responsible for:
 
 The firmware shall remain as close as possible to a transparent transport layer.
 
-A binary sequence received from USB shall be transmitted to UART without protocol-level modification.
+A binary sequence received from UART0 shall be transmitted to UART2 without protocol-level modification.
 
-A binary sequence received from UART shall be transmitted to USB without protocol-level modification.
+A binary sequence received from UART2 shall be transmitted to UART0 without protocol-level modification.
 
 The firmware therefore does not replace the servo protocol with a new application protocol.
 
@@ -163,7 +163,7 @@ The firmware runs on the ESP32 used by the xArm controller.
 
 The firmware uses:
 
-- USB for communication with the host;
+- UART0 through the board's CH340 USB-to-serial converter for communication with the host;
 - UART2 for communication with the servo bus;
 - GPIOs for controlling the direction of the half-duplex bus.
 
@@ -191,6 +191,18 @@ The direction of the half-duplex bus is controlled using:
 | `tx_en` |   25 | Enable transmission |
 | `rx_en` |   12 | Enable reception    |
 
+Both signals are active high. The levels recovered from the stock MicroPython
+firmware and validated on the physical controller are:
+
+| Mode | GPIO25 `tx_en` | GPIO12 `rx_en` |
+| ---- | -------------: | -------------: |
+| RX   |              0 |              1 |
+| TX   |              1 |              0 |
+
+GPIO12 is an ESP32 strapping pin. The controller already uses it for `rx_en`
+in the stock firmware. The Rust firmware only drives it after reset strapping
+has been sampled and configures TX inactive before enabling RX.
+
 When a command is transmitted, the bus must be configured for TX.
 
 Immediately after the last byte of the command has been transmitted, the firmware must switch the bus back to RX.
@@ -213,11 +225,14 @@ RX enabled
 response available
 ```
 
-### 3.4 USB interface
+### 3.4 Host serial interface
 
-The USB interface is the communication interface between the host and the ESP32 firmware.
+The ESP32-WROOM-32D has no native USB controller. The physical USB connector
+on the controller is connected to a QinHeng CH340 USB-to-serial converter
+(`1a86:7523`), which exposes ESP32 UART0 to the host.
 
-The USB data path is binary.
+UART0 uses 115200 baud, 8 data bits, no parity, one stop bit and no flow
+control. The serial data path is binary.
 
 The firmware shall not require textual commands, Python expressions, JSON, or another serialization format.
 
@@ -422,7 +437,7 @@ For example, motion confirmation requires polling `SERVO_POS_READ`.
 
 At startup, the firmware shall initialize:
 
-1. the USB interface;
+1. the host UART0 interface;
 2. UART2;
 3. the half-duplex direction control;
 4. the communication buffers.
@@ -439,11 +454,11 @@ Initialize interfaces
 READY
 ```
 
-### 5.2 USB → UART transaction
+### 5.2 Host UART0 → servo UART2 transaction
 
 When bytes are received from the host:
 
-1. the bytes are received through USB;
+1. the bytes are received through the USB serial port and UART0;
 2. the data is buffered as required;
 3. the bus is switched to TX;
 4. the bytes are transmitted through UART2;
@@ -452,7 +467,7 @@ When bytes are received from the host:
 The firmware shall not modify the received bytes.
 
 ```text
-USB
+USB serial / UART0
  │
  ▼
 RX buffer
@@ -470,13 +485,13 @@ last byte
 RX mode
 ```
 
-### 5.3 UART → USB transaction
+### 5.3 Servo UART2 → host UART0 transaction
 
 When bytes are received from the servo bus:
 
 1. UART2 receives the bytes;
 2. the bytes are buffered as required;
-3. the data is transmitted through USB;
+3. the data is transmitted through UART0 and the CH340;
 4. the data is not modified.
 
 ```text
@@ -486,7 +501,7 @@ UART2
 RX buffer
  │
  ▼
-USB TX
+UART0 TX / CH340
  │
  ▼
 Host
@@ -519,11 +534,10 @@ No response is expected from the servo.
 
 ### 5.6 Response reception
 
-The stock firmware waits up to 50 ms for the first response byte after a read request.
-
-The Rust implementation shall provide equivalent timeout behaviour unless a different value is established through benchmarking and testing.
-
-The firmware must use buffered UART reception rather than relying on slow per-byte polling.
+The host waits up to 50 ms for the first response byte after a read request.
+The firmware does not interpret the command code and therefore cannot decide
+whether a response is expected. It continuously drains the buffered UART2 RX
+FIFO and forwards every received byte to UART0 without modification.
 
 ### 5.7 Frame handling
 
@@ -533,11 +547,26 @@ The firmware does not need to interpret command parameters or response values in
 
 Protocol-level validation and decoding belong to the host-side driver unless explicitly required by a future firmware feature.
 
+The firmware only recognizes physical command boundaries. It searches for
+`55 55`, then reads the ID and `Length` fields. The physical frame size is
+`Length + 3`. It neither validates the checksum nor interprets the command.
+
+An incomplete host frame is discarded after 50 ms without a new byte. This
+allows a new host process to recover after a disconnection in the middle of a
+frame.
+
+### 5.8 Transaction ownership
+
+The host shall keep at most one request expecting a response in flight. The
+firmware does not match requests with responses and does not generate an
+additional transport envelope. Multiple fire-and-forget write frames may be
+sent consecutively.
+
 ---
 
 ## 6. Firmware Capabilities
 
-The firmware provides access to the capabilities of the servo protocol through USB.
+The firmware provides access to the capabilities of the servo protocol through the CH340/UART0 serial port.
 
 ### 6.1 Motion
 
@@ -581,11 +610,13 @@ This distinction keeps the firmware independent from ROS 2 and from the robot's 
 
 ## 7. Error & Failure Behaviour
 
-### 7.1 USB errors
+### 7.1 Host serial disconnection
 
-The firmware shall detect USB disconnection and recover when the host reconnects.
-
-The firmware shall not assume that a USB connection remains permanently available.
+The CH340 does not provide a native USB connection-state event to the ESP32
+firmware. Consequently, the firmware detects transport interruption through
+UART errors or expiration of an incomplete frame rather than through a USB
+disconnect event. It remains in RX and accepts new frames when the host reopens
+the serial port.
 
 ### 7.2 UART errors
 
@@ -599,7 +630,7 @@ Buffers shall be bounded.
 
 If the incoming data rate exceeds the available buffer capacity, the firmware shall detect the overflow and recover without corrupting the firmware state.
 
-The exact reporting mechanism may be defined during implementation.
+Overflows and malformed lengths increment debugger-visible diagnostic counters.
 
 ### 7.4 Read timeout
 
@@ -619,9 +650,31 @@ The firmware itself should forward the raw response bytes without altering them.
 
 ### 7.6 Communication loss
 
-The firmware shall remain operational after a temporary communication failure and shall be able to resume normal USB ↔ UART communication once the communication path becomes available again.
+The firmware remains operational after a temporary communication failure and
+resumes normal UART0 ↔ UART2 communication when the path becomes available.
 
-The safety behaviour associated with loss of communication while a servo is physically moving shall be explicitly defined before the firmware is considered production-ready.
+On communication loss, the firmware:
+
+- returns and remains in RX mode;
+- discards an incomplete host frame after 50 ms;
+- does not generate any new servo command;
+- does not inject a stop command, because it has no authoritative list of
+  moving servo IDs and must remain a transparent transport;
+- allows a movement already accepted by a servo to finish according to the
+  duration encoded by the host.
+
+System-level emergency stopping is outside this transport firmware and must be
+implemented through power control or a higher-level safety component.
+
+### 7.7 Diagnostic counters
+
+The release firmware retains the `FIRMWARE_COUNTERS` symbol containing
+saturating 32-bit atomic counters for host and servo UART errors, discarded
+stale bytes, malformed lengths, oversized frames, incomplete-frame timeouts,
+forwarded frames and forwarded servo bytes.
+
+The counters are readable through a debugger and are never printed on UART0,
+because diagnostic text would corrupt the binary host transport.
 
 ---
 
@@ -645,8 +698,8 @@ The Rust firmware shall eliminate the software behaviour responsible for this ov
 
 The firmware shall prioritize:
 
-- low USB → UART latency;
-- low UART → USB latency;
+- low UART0 → UART2 latency;
+- low UART2 → UART0 latency;
 - minimal TX → RX direction-switch latency;
 - buffered UART reception;
 - low jitter;
