@@ -568,12 +568,11 @@ SERVO_LOAD_OR_UNLOAD_WRITE = const(31)
   before/after latency benchmark comparing it to the stock MicroPython firmware.
 - Write the YOLO → MoveIt goal-pose node.
 
-
 ### 2026-08-22 — MicroPython firmware benchmarks
 
 Today, I established the benchmarking process to measure the latency of both the Python and the upcoming Rust firmware implementations.
 
-The benchmarks measure the firmware processing time, as well as the time spent on USB and servo bus communication. 
+The benchmarks measure the firmware processing time, as well as the time spent on USB and servo bus communication.
 
 You can find the original Hiwonder firmware here: [Google Drive link](https://drive.google.com/drive/folders/1chAm2XyppydW-atGWoAcX0cv-8cct9qf?usp=sharing).
 
@@ -599,10 +598,23 @@ On top of the latency, position reads fail 23.6% of the time (236/1000 returned 
 
 Conclusion. The time spent in the MicroPython interpreter is excessively high for real-time robotic control. This strongly reinforces my decision to rewrite the firmware in Rust with a direct USB passthrough.
 
-
 **Next steps.**
 
 - Write the Rust driver implementing the frame format above, then the USB-passthrough firmware itself, with the
   before/after latency benchmark comparing it to the stock MicroPython firmware.
 - Write the YOLO → MoveIt goal-pose node.
 - Write the ros2_control package.
+
+### 2026-08-23 — Rust firmware specs
+
+Today, I wrote the specifications for the Rust firmware with the help of AI.
+
+I'll use AI to help me implement the Rust firmware, while learning how USB passthrough works on the ESP32 in practice and how the code works.
+
+You can find the specifications here:
+`./rust_firmware/specs/DeepSight-Nebula_Rust_Firmware_Specification.md`
+
+- Write the Rust firmware and driver implementing the frame format described above, then implement the USB passthrough firmware itself, with a before/after latency benchmark comparing it to the stock MicroPython firmware.
+- Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
+- Write the YOLO → MoveIt goal-pose node.
+- Write the `ros2_control` package.
