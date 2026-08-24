@@ -150,6 +150,23 @@ ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[
 ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[]"
 ```
 
+Launch the complete perception visualization (robot model, TF tree, annotated YOLO image, metric depth image,
+colored stereo point cloud, and 3D detection markers) from the `app` folder with the Python environment active:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+source ../.venv/bin/activate
+ros2 launch stereo_camera_calibration perception_rviz.launch.py
+```
+
+The launch uses `yolo11s.pt`, confidence `0.15`, and COCO class `32` (`sports ball`) by default. The model and
+confidence can be overridden with launch arguments, for example:
+
+```bash
+ros2 launch stereo_camera_calibration perception_rviz.launch.py model:=yolo11x.pt confidence:=0.2
+```
+
 ###### How it works
 
 1. The script uses VideoCapture (default index: 0) in the capture_frames function. The stereo stream is configured
@@ -663,16 +680,6 @@ I'll use AI to help me implement the Rust firmware, while learning how USB passt
 You can find the specifications here:
 `./rust_firmware/specs/DeepSight-Nebula_Rust_Firmware_Specification.md`
 
-**Next steps.**
-
-- Write the Rust firmware and driver implementing the frame format described above, then implement the USB passthrough firmware itself, with a before/after latency benchmark comparing it to the stock MicroPython firmware.
-- Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
-- Write the YOLO → MoveIt goal-pose node.
-- Write the `ros2_control` package.
-
-
-### 2026-08-24 — Rust firmware
-
 I wrote the ESP32 firmware in Rust with the help of AI. This first embedded Rust project helped me understand the complete communication path, from the host serial port to the half-duplex servo bus.
 
 I also developed a new C++ host driver that covers the main features of the servo protocol:
@@ -731,3 +738,16 @@ The Rust firmware reduces the mean end-to-end read latency by approximately 93.2
 - Connect the stereo camera to MoveIt and Gazebo to generate the depth map.
 - Write the YOLO → MoveIt goal-pose node.
 - Write the `ros2_control` package.
+
+### 2026-08-24 — Stereo depth, YOLO and RViz
+
+Today, I connected complete perception pipeline. Stereo calibration, OpenCV rectification and StereoSGBM generate metric depth in real time. YOLO11s detects tennis ball on RTX 5080 and combines detection with
+median depth.
+
+![RViz perception](schemas/schema18.png)
+
+**Next steps.**
+
+- Validate 3D coordinates.
+- Calibrate servo joints.
+- Write `ros2_control` interface, then connect target pose to MoveIt.

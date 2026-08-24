@@ -1,9 +1,11 @@
 # Default initial positions for hiwonder_esp32's ros2_control fake system
 
+# Default pose visually matched in RViz to measured servo positions
+# 443, 512, 127, 863, 856, 501. Servo-to-URDF calibration is still approximate.
 initial_positions:
-  gripper_left_joint: 0
-  limb1_to_base_link_joint: 0
-  limb2_to_limb1_joint: 0
-  limb3_to_limb2_joint: 0
-  limb4_to_limb3_joint: 0
-  limb5_to_limb4_joint: 0
+  gripper_left_joint: 0.0
+  limb1_to_base_link_joint: 0.015082
+  limb2_to_limb1_joint: 1.550816
+  limb3_to_limb2_joint: 1.550816
+  limb4_to_limb3_joint: -1.573432
+  limb5_to_limb4_joint: -0.008483

@@ -1,0 +1,113 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Name: Grid
+      Enabled: true
+      Value: true
+      Cell Size: 0.1
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+    - Class: rviz_default_plugins/RobotModel
+      Name: Robot
+      Enabled: true
+      Value: true
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Alpha: 1
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/TF
+      Name: TF
+      Enabled: true
+      Value: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Scale: 0.05
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Stereo point cloud
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /stereo/points
+      Color Transformer: RGB8
+      Position Transformer: XYZ
+      Size (Pixels): 2
+      Style: Points
+      Decay Time: 0
+    - Class: rviz_default_plugins/MarkerArray
+      Name: YOLO 3D detections
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /yolo/markers
+    - Class: rviz_default_plugins/Image
+      Name: YOLO annotated image
+      Enabled: true
+      Value: true
+      Normalize Range: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /yolo/image_annotated
+    - Class: rviz_default_plugins/Image
+      Name: Metric depth
+      Enabled: true
+      Value: true
+      Normalize Range: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /stereo/depth/image_color
+  Global Options:
+    Background Color: 32; 32; 32
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.8
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0.15
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 0.45
+      Target Frame: base_link
+      Yaw: 0.75
+Window Geometry:
+  Height: 900
+  Width: 1500
+  X: 50
+  Y: 50

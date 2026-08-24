@@ -1,7 +1,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "cv_bridge/cv_bridge.hpp"
+#include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/image_encodings.hpp"
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 
 #include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
@@ -13,6 +16,7 @@
 #include <cmath>
 #include <cstdio>
 #include <memory>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -26,11 +30,18 @@ public:
     const auto calibration_file =
       declare_parameter<std::string>("calibration_file", "calibration/stereo_calib.xml");
     const auto camera_index = declare_parameter<int>("camera_index", 0);
+    show_debug_windows_ = declare_parameter<bool>("show_debug_windows", true);
 
     left_image_publisher_ = create_publisher<sensor_msgs::msg::Image>(
       "/stereo/left/image_rect", rclcpp::SensorDataQoS());
     depth_publisher_ = create_publisher<sensor_msgs::msg::Image>(
       "/stereo/depth", rclcpp::SensorDataQoS());
+    depth_color_publisher_ = create_publisher<sensor_msgs::msg::Image>(
+      "/stereo/depth/image_color", rclcpp::SensorDataQoS());
+    depth_camera_info_publisher_ = create_publisher<sensor_msgs::msg::CameraInfo>(
+      "/stereo/depth/camera_info", rclcpp::SensorDataQoS());
+    point_cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/stereo/points", rclcpp::SensorDataQoS());
 
     load_calibration(calibration_file);
     run(camera_index);
@@ -53,8 +64,12 @@ private:
   cv::Mat d2_;
   cv::Mat rotation_;
   cv::Mat translation_;
+  bool show_debug_windows_ = true;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_color_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr depth_camera_info_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_publisher_;
 
   void load_calibration(const std::string & path)
   {
@@ -164,15 +179,18 @@ private:
       32 * kBlockSize * kBlockSize,
       1, 63, 10, 100, 2, cv::StereoSGBM::MODE_SGBM_3WAY);
 
-    cv::namedWindow("Stereo rectification", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Stereo rectification", 1600, 450);
-    cv::namedWindow("Disparity", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Disparity", 800, 450);
-    cv::namedWindow("Depth (0.15 m - 2.0 m)", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Depth (0.15 m - 2.0 m)", 800, 450);
-    RCLCPP_INFO(get_logger(), "Press 'q' or Escape to stop");
+    if (show_debug_windows_) {
+      cv::namedWindow("Stereo rectification", cv::WINDOW_NORMAL);
+      cv::resizeWindow("Stereo rectification", 1600, 450);
+      cv::namedWindow("Disparity", cv::WINDOW_NORMAL);
+      cv::resizeWindow("Disparity", 800, 450);
+      cv::namedWindow("Depth (0.15 m - 2.0 m)", cv::WINDOW_NORMAL);
+      cv::resizeWindow("Depth (0.15 m - 2.0 m)", 800, 450);
+      RCLCPP_INFO(get_logger(), "Press 'q' or Escape to stop");
+    }
 
     cv::Mat stereo_frame;
+    std::size_t frame_number = 0;
     while (rclcpp::ok()) {
       if (!camera.read(stereo_frame) || stereo_frame.empty()) {
         RCLCPP_WARN(get_logger(), "Unable to capture a stereo frame");
@@ -233,13 +251,72 @@ private:
 
       std_msgs::msg::Header image_header;
       image_header.stamp = now();
-      image_header.frame_id = "camera_left_lens_link";
+      image_header.frame_id = "camera_left_optical_frame";
       left_image_publisher_->publish(
         *cv_bridge::CvImage(
           image_header, sensor_msgs::image_encodings::BGR8, left_rectified).toImageMsg());
       depth_publisher_->publish(
         *cv_bridge::CvImage(
           image_header, sensor_msgs::image_encodings::TYPE_32FC1, depth).toImageMsg());
+
+      sensor_msgs::msg::CameraInfo depth_camera_info;
+      depth_camera_info.header = image_header;
+      depth_camera_info.width = depth_size.width;
+      depth_camera_info.height = depth_size.height;
+      depth_camera_info.distortion_model = "plumb_bob";
+      depth_camera_info.d.assign(5, 0.0);
+      depth_camera_info.k = {
+        depth_p1.at<double>(0, 0), 0.0, depth_p1.at<double>(0, 2),
+        0.0, depth_p1.at<double>(1, 1), depth_p1.at<double>(1, 2),
+        0.0, 0.0, 1.0};
+      depth_camera_info.r = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
+      for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 4; ++column) {
+          depth_camera_info.p[row * 4 + column] = depth_p1.at<double>(row, column);
+        }
+      }
+      depth_camera_info_publisher_->publish(depth_camera_info);
+
+      if (frame_number % 3 == 0) {
+        sensor_msgs::msg::PointCloud2 cloud;
+        cloud.header = image_header;
+        cloud.height = depth_size.height;
+        cloud.width = depth_size.width;
+        cloud.is_dense = false;
+        sensor_msgs::PointCloud2Modifier modifier(cloud);
+        modifier.setPointCloud2FieldsByString(2, "xyz", "rgb");
+        modifier.resize(static_cast<std::size_t>(depth_size.area()));
+
+        sensor_msgs::PointCloud2Iterator<float> cloud_x(cloud, "x");
+        sensor_msgs::PointCloud2Iterator<float> cloud_y(cloud, "y");
+        sensor_msgs::PointCloud2Iterator<float> cloud_z(cloud, "z");
+        sensor_msgs::PointCloud2Iterator<uint8_t> cloud_r(cloud, "r");
+        sensor_msgs::PointCloud2Iterator<uint8_t> cloud_g(cloud, "g");
+        sensor_msgs::PointCloud2Iterator<uint8_t> cloud_b(cloud, "b");
+        const float invalid = std::numeric_limits<float>::quiet_NaN();
+
+        for (int y = 0; y < depth_size.height; ++y) {
+          for (int x = 0; x < depth_size.width; ++x) {
+            const cv::Vec3f point = points_3d.at<cv::Vec3f>(y, x);
+            const bool valid = valid_depth.at<uint8_t>(y, x) != 0;
+            *cloud_x = valid ? point[0] : invalid;
+            *cloud_y = valid ? point[1] : invalid;
+            *cloud_z = valid ? point[2] : invalid;
+            const cv::Vec3b color = left_depth_rectified.at<cv::Vec3b>(y, x);
+            *cloud_r = color[2];
+            *cloud_g = color[1];
+            *cloud_b = color[0];
+            ++cloud_x;
+            ++cloud_y;
+            ++cloud_z;
+            ++cloud_r;
+            ++cloud_g;
+            ++cloud_b;
+          }
+        }
+        point_cloud_publisher_->publish(cloud);
+      }
+      ++frame_number;
 
       cv::Mat depth_clamped;
       cv::min(depth, kMaxDepthMeters, depth_clamped);
@@ -253,6 +330,9 @@ private:
       cv::Mat depth_color;
       cv::applyColorMap(depth_gray, depth_color, cv::COLORMAP_TURBO);
       depth_color.setTo(cv::Scalar::all(0), ~valid_depth);
+      depth_color_publisher_->publish(
+        *cv_bridge::CvImage(
+          image_header, sensor_msgs::image_encodings::BGR8, depth_color).toImageMsg());
 
       const cv::Point center(depth_size.width / 2, depth_size.height / 2);
       cv::drawMarker(depth_color, center, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, 24, 2);
@@ -294,17 +374,21 @@ private:
         display, performance_label, cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.0,
         cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
 
-      cv::imshow("Stereo rectification", display);
-      cv::imshow("Disparity", disparity_color);
-      cv::imshow("Depth (0.15 m - 2.0 m)", depth_color);
-      const int key = cv::waitKey(1);
-      if (key == 'q' || key == 27) {
-        break;
+      if (show_debug_windows_) {
+        cv::imshow("Stereo rectification", display);
+        cv::imshow("Disparity", disparity_color);
+        cv::imshow("Depth (0.15 m - 2.0 m)", depth_color);
+        const int key = cv::waitKey(1);
+        if (key == 'q' || key == 27) {
+          break;
+        }
       }
     }
 
     camera.release();
-    cv::destroyAllWindows();
+    if (show_debug_windows_) {
+      cv::destroyAllWindows();
+    }
   }
 };
 

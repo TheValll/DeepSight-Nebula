@@ -97,6 +97,14 @@
       <child link="camera_${side}_lens_link"/>
     </joint>
 
+    <!-- REP-103 optical frame: +Z forward, +X right, +Y down. -->
+    <link name="camera_${side}_optical_frame"/>
+    <joint name="camera_${side}_optical_joint" type="fixed">
+      <origin xyz="0.0 0.0 0.0" rpy="${-pi/2} 0.0 ${-pi/2}"/>
+      <parent link="camera_${side}_lens_link"/>
+      <child link="camera_${side}_optical_frame"/>
+    </joint>
+
     <gazebo reference="camera_${side}_lens_link">
       <sensor name="${side}_camera" type="camera">
         <update_rate>60.0</update_rate>

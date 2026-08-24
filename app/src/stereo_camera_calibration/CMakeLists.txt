@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -34,6 +35,12 @@ install(PROGRAMS
   scripts/yolo_detection_node.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME yolo_detection_node
+)
+
+install(DIRECTORY
+  launch
+  rviz
+  DESTINATION share/${PROJECT_NAME}
 )
 
 target_link_libraries(calibration_exe

@@ -3,6 +3,7 @@ yolov8n.pt
 yolov8x.pt
 yolov8x.engine
 yolo11n.pt
+yolo11s.pt
 .vs
 __pycache__
 log
