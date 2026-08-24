@@ -2,6 +2,7 @@ yolov8n.pt
 .venv/
 yolov8x.pt
 yolov8x.engine
+yolo11n.pt
 .vs
 __pycache__
 log

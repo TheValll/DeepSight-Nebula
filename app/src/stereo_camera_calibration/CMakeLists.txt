@@ -7,7 +7,9 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(cv_bridge REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -17,15 +19,28 @@ include_directories(include)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(calibration_exe src/calibration_node.cpp)
+add_executable(rectification_exe src/rectification_node.cpp)
 
 ament_target_dependencies(calibration_exe rclcpp)
+ament_target_dependencies(rectification_exe cv_bridge rclcpp sensor_msgs)
 
 install(TARGETS
   calibration_exe
+  rectification_exe
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/yolo_detection_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME yolo_detection_node
+)
+
 target_link_libraries(calibration_exe
+  ${OpenCV_LIBS}
+)
+
+target_link_libraries(rectification_exe
   ${OpenCV_LIBS}
 )
 

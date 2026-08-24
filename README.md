@@ -85,6 +85,9 @@ python -m pip install --upgrade pip
 python -m pip install "torch==2.13.0+cu132" "torchvision==0.28.0+cu132" \
   --index-url https://download.pytorch.org/whl/cu132 \
   --no-cache-dir
+python -m pip install "numpy==1.26.4" "opencv-python==4.10.0.84" typeguard ultralytics
+python -m pip install -U ultralytics
+python -m pip install typeguard
 ```
 
 #### ROS 2 Packages Documentation :
@@ -118,6 +121,33 @@ Run the calibration node:
 
 ```bash
 ros2 run stereo_camera_calibration calibration_exe
+```
+
+Validate the stereo rectification using the saved calibration:
+
+```bash
+ros2 run stereo_camera_calibration rectification_exe
+```
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+source ../.venv/bin/activate
+ros2 run stereo_camera_calibration yolo_detection_node
+```
+
+By default, the YOLO node only displays COCO class `32` (`sports ball`), which includes tennis balls. Override the
+`classes` ROS 2 parameter to select one or more classes:
+
+```bash
+# Only sports balls (default)
+ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[32]"
+
+# Sports balls and bottles
+ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[32, 39]"
+
+# Disable class filtering
+ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[]"
 ```
 
 ###### How it works
