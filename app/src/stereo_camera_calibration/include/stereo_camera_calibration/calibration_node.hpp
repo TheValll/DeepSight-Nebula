@@ -136,11 +136,12 @@ void camera_stereo_calibration(){
 }
 
 void capture_frames(){
-    VideoCapture cap(2);
+    VideoCapture cap(0, CAP_V4L2);
     
     cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
-    cap.set(CAP_PROP_FRAME_WIDTH, 1280);
-    cap.set(CAP_PROP_FRAME_HEIGHT, 640); 
+    cap.set(CAP_PROP_FRAME_WIDTH, 2560);
+    cap.set(CAP_PROP_FRAME_HEIGHT, 720);
+    cap.set(CAP_PROP_FPS, 60);
 
     if (!cap.isOpened()) {
         cerr << "Error : Impossible to open the camera" << endl;

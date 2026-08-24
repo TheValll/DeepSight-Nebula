@@ -74,6 +74,19 @@ This project was developed on an **Ubuntu Linux** container in a **Fedora Linux*
 
 ### Installation & Execution
 
+#### Python Environnement Documentation :
+
+For my RTX 5080 (this may vary depending on your GPU):
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "torch==2.13.0+cu132" "torchvision==0.28.0+cu132" \
+  --index-url https://download.pytorch.org/whl/cu132 \
+  --no-cache-dir
+```
+
 #### ROS 2 Packages Documentation :
 
 ##### 1. Hiwonder xArm ESP32 URDF Description
@@ -107,6 +120,15 @@ Run the calibration node:
 ros2 run stereo_camera_calibration calibration_exe
 ```
 
+###### How it works
+
+1. The script uses VideoCapture (default index: 0) in the capture_frames function. The stereo stream is configured
+   as MJPEG at 2560x720 and 60 FPS, producing two 1280x720 images.
+   Note: You may need to change this index in the code if your camera is on a different port (e.g., /dev/video0).
+2. The application will ask you to press **'S'** to take pictures of your chessboard in different positions.
+3. Once enough images are captured, it automatically calculates the calibration matrices.
+4. A **calibration folder** will be created containing the captured images and the resulting XML calibration file.
+
 ##### 3. MoveIt2 Configuration
 
 This package contains the MoveIt2 configuration of the Hiwonder xArm ESP32.
@@ -116,14 +138,6 @@ Launch MoveIt with RViz (planning + execution on the mock hardware):
 ```bash
 ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py
 ```
-
-###### How it works
-
-1. The script uses VideoCapture (default index: 2) in the capture_frames function.
-   Note: You may need to change this index in the code if your camera is on a different port (e.g., /dev/video0).
-2. The application will ask you to press **'S'** to take pictures of your chessboard in different positions.
-3. Once enough images are captured, it automatically calculates the calibration matrices.
-4. A **calibration folder** will be created containing the captured images and the resulting XML calibration file.
 
 ---
 

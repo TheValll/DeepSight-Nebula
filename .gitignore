@@ -1,4 +1,5 @@
 yolov8n.pt
+.venv/
 yolov8x.pt
 yolov8x.engine
 .vs
