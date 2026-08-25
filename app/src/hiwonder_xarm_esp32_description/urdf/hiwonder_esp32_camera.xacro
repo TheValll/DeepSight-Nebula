@@ -1,14 +1,6 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- ==================== STEREO CAMERA MOUNT (3D printed) ==================== -->
-  <!-- Mesh frames (from modelisations/amount, mm) — X = stereo baseline (96 mm),
-       Y = height (46.5 mm, the two screw ears mark the bottom at -Y),
-       Z = optical axis (support back plate at Z=0, cover closes the box at Z=26).
-       The box lies on top of the limb4 bracket, centered on the wrist axis,
-       optical axis along the gripper direction (-Y of limb4).
-       Adjust the two properties below to fine-tune the real fit. -->
-
   <xacro:property name="camera_mount_xyz" value="0.0208 -0.025 0.0255"/>
   <xacro:property name="camera_mount_rpy" value="${pi/2} 0.0 0.0"/>
 
@@ -74,12 +66,6 @@
     <child link="camera_link"/>
   </joint>
 
-  <!-- ==================== STEREO SENSORS (Gazebo) ==================== -->
-  <!-- One lens per cover window, centered in each hole, 1 mm outside the box.
-       Gazebo cameras look along +X of the sensor frame, while the mount optical
-       axis is +Z of camera_support_link, hence the rpy below (X_lens = Z_support,
-       Z_lens = Y_support, Y_lens = X_support). Left lens = +X of the support. -->
-
   <xacro:macro name="camera_lens" params="side x_pos">
     <link name="camera_${side}_lens_link">
       <visual>
@@ -97,7 +83,6 @@
       <child link="camera_${side}_lens_link"/>
     </joint>
 
-    <!-- REP-103 optical frame: +Z forward, +X right, +Y down. -->
     <link name="camera_${side}_optical_frame"/>
     <joint name="camera_${side}_optical_joint" type="fixed">
       <origin xyz="0.0 0.0 0.0" rpy="${-pi/2} 0.0 ${-pi/2}"/>
@@ -112,7 +97,6 @@
         <visualize>true</visualize>
         <topic>${side}_camera/image_raw</topic>
         <camera>
-          <!-- ELP-USB960P2CAM-V90, OV9750, HFOV ~77 deg, 1280x720 per eye at 60 fps -->
           <horizontal_fov>1.344</horizontal_fov>
           <image>
             <width>1280</width>
