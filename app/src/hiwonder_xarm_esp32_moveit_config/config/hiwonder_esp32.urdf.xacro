@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hiwonder_esp32">
     <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="use_mock_hardware" default="true" />
+    <xacro:arg name="serial_port" default="/dev/ttyUSB0" />
+    <!-- Keep ID 1 isolated until its broken cable has been repaired and revalidated. -->
+    <xacro:arg name="gripper_hardware_io_enabled" default="false" />
+    <xacro:arg name="read_only" default="false" />
 
     <!-- Import hiwonder_esp32 urdf file -->
     <xacro:include filename="$(find hiwonder_xarm_esp32_description)/urdf/hiwonder_esp32.urdf.xacro" />
@@ -9,6 +14,12 @@
     <xacro:include filename="hiwonder_esp32.ros2_control.xacro" />
 
 
-    <xacro:hiwonder_esp32_ros2_control name="FakeSystem" initial_positions_file="$(arg initial_positions_file)"/>
+    <xacro:hiwonder_esp32_ros2_control
+        name="HiwonderSystem"
+        initial_positions_file="$(arg initial_positions_file)"
+        use_mock_hardware="$(arg use_mock_hardware)"
+        serial_port="$(arg serial_port)"
+        gripper_hardware_io_enabled="$(arg gripper_hardware_io_enabled)"
+        read_only="$(arg read_only)"/>
 
 </robot>

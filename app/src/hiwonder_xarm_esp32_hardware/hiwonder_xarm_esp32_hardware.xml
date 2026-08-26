@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<library path="hiwonder_xarm_esp32_hardware">
+  <class
+    name="hiwonder_xarm_esp32_hardware/HiwonderSystem"
+    type="hiwonder_xarm_esp32_hardware::HiwonderSystem"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>ros2_control system interface for the Hiwonder xArm ESP32 Rust firmware.</description>
+  </class>
+</library>

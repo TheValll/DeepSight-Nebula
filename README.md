@@ -751,3 +751,16 @@ median depth.
 - Validate 3D coordinates.
 - Calibrate servo joints.
 - Write `ros2_control` interface, then connect target pose to MoveIt.
+
+### 2026-08-26 — ROS 2 hardware driver
+
+Today, I connected the robot driver to ROS 2. The physical robot can now be visualized in real time in RViz using read-only mode.
+
+While measuring the mechanical limits, the cable between servos 1 and 2 broke at its solder joint.
+
+![Broken or disconnected servo cable](schemas/schema19.png)
+
+**Next steps.**
+
+- Repair the cable between servos 1 and 2.
+- Validate small physical movements with `ros2_control`.

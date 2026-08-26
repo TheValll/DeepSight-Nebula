@@ -11,31 +11,49 @@ default_acceleration_scaling_factor: 0.1
 # move_group crashes at startup with an InvalidParameterTypeException.
 joint_limits:
   gripper_left_joint:
+    has_position_limits: true
+    min_position: -0.015
+    max_position: 0.0112222
     has_velocity_limits: true
     max_velocity: 0.1
     has_acceleration_limits: true
     max_acceleration: 0.5
   limb1_to_base_link_joint:
+    has_position_limits: true
+    min_position: -1.99135
+    max_position: 2.02989
     has_velocity_limits: true
     max_velocity: 2.0
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb2_to_limb1_joint:
+    has_position_limits: true
+    min_position: -1.53632
+    max_position: 1.52149
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb3_to_limb2_joint:
+    has_position_limits: true
+    min_position: -1.98033
+    max_position: 2.04090
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb4_to_limb3_joint:
+    has_position_limits: true
+    min_position: -1.81638
+    max_position: 1.99961
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb5_to_limb4_joint:
+    has_position_limits: true
+    min_position: -1.571
+    max_position: 1.571
     has_velocity_limits: true
     max_velocity: 2.6
     has_acceleration_limits: true

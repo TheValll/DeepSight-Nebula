@@ -1,0 +1,10 @@
+# Deliberately contains no controller claiming a position command interface.
+# calibration_rviz.launch.py only spawns joint_state_broadcaster from this file.
+controller_manager:
+  ros__parameters:
+    # Six sequential position reads take about 26 ms with the Rust firmware.
+    update_rate: 25
+    enforce_command_limits: true
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster

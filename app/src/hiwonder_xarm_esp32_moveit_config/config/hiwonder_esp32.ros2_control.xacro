@@ -1,63 +1,160 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <xacro:macro name="hiwonder_esp32_ros2_control" params="name initial_positions_file">
-        <xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)['initial_positions']}"/>
+  <xacro:macro
+    name="hiwonder_esp32_ros2_control"
+    params="name initial_positions_file use_mock_hardware serial_port gripper_hardware_io_enabled:=false read_only:=false">
+    <xacro:property
+      name="initial_positions"
+      value="${xacro.load_yaml(initial_positions_file)['initial_positions']}"/>
+    <xacro:property name="radians_per_raw" value="${4.1887902047863905 / 1000.0}"/>
+    <xacro:property name="gripper_units_per_raw" value="${0.03 / 540.0}"/>
 
-        <ros2_control name="${name}" type="system">
-            <hardware>
-                <!-- By default, set up controllers for simulation. This won't work on real hardware -->
-                <plugin>mock_components/GenericSystem</plugin>
-            </hardware>
-            <joint name="limb1_to_base_link_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['limb1_to_base_link_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <joint name="limb2_to_limb1_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['limb2_to_limb1_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <joint name="limb3_to_limb2_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['limb3_to_limb2_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <joint name="limb4_to_limb3_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['limb4_to_limb3_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <joint name="limb5_to_limb4_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['limb5_to_limb4_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <joint name="gripper_left_joint">
-                <command_interface name="position"/>
-                <state_interface name="position">
-                  <param name="initial_value">${initial_positions['gripper_left_joint']}</param>
-                </state_interface>
-                <state_interface name="velocity"/>
-            </joint>
-            <!-- Mimic joint (follows gripper_left_joint, multiplier -1 from the URDF).
-                 State only, so joint_state_broadcaster publishes it and both jaws
-                 move in RViz. -->
-            <joint name="gripper_right_joint">
-                <state_interface name="position"/>
-                <state_interface name="velocity"/>
-            </joint>
+    <ros2_control name="${name}" type="system">
+      <hardware>
+        <xacro:if value="${use_mock_hardware}">
+          <plugin>mock_components/GenericSystem</plugin>
+        </xacro:if>
+        <xacro:unless value="${use_mock_hardware}">
+          <plugin>hiwonder_xarm_esp32_hardware/HiwonderSystem</plugin>
+          <param name="port">${serial_port}</param>
+          <param name="baudrate">115200</param>
+          <param name="timeout_ms">50</param>
+          <!-- CH340 DTR/RTS can reset the ESP32 when the serial port opens. -->
+          <param name="startup_delay_ms">2000</param>
+          <param name="movement_duration_ms">40</param>
+          <!-- read_only suppresses every hardware output in HiwonderSystem. -->
+          <param name="read_only">${read_only}</param>
+        </xacro:unless>
+      </hardware>
 
-        </ros2_control>
-    </xacro:macro>
+      <!--
+        direction=+1 is provisional.  The raw ranges below are measured safe ranges;
+        the ROS direction still needs joint-by-joint RViz validation before motion.
+      -->
+      <joint name="limb1_to_base_link_joint">
+        <param name="servo_id">6</param>
+        <param name="raw_reference">501</param>
+        <param name="ros_reference">0.015082</param>
+        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="direction">-1</param>
+        <param name="raw_min">20</param>
+        <param name="raw_max">980</param>
+        <param name="hardware_io_enabled">true</param>
+        <command_interface name="position">
+          <param name="min">-1.99135</param>
+          <param name="max">2.02989</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['limb1_to_base_link_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="limb2_to_limb1_joint">
+        <param name="servo_id">5</param>
+        <param name="raw_reference">856</param>
+        <param name="ros_reference">1.550816</param>
+        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="direction">1</param>
+        <param name="raw_min">119</param>
+        <param name="raw_max">849</param>
+        <param name="hardware_io_enabled">true</param>
+        <command_interface name="position">
+          <param name="min">-1.53632</param>
+          <param name="max">1.52149</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['limb2_to_limb1_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="limb3_to_limb2_joint">
+        <param name="servo_id">4</param>
+        <param name="raw_reference">863</param>
+        <param name="ros_reference">1.550816</param>
+        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="direction">1</param>
+        <param name="raw_min">20</param>
+        <param name="raw_max">980</param>
+        <param name="hardware_io_enabled">true</param>
+        <command_interface name="position">
+          <param name="min">-1.98033</param>
+          <param name="max">2.04090</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['limb3_to_limb2_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="limb4_to_limb3_joint">
+        <param name="servo_id">3</param>
+        <param name="raw_reference">127</param>
+        <param name="ros_reference">-1.573432</param>
+        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="direction">1</param>
+        <param name="raw_min">69</param>
+        <param name="raw_max">980</param>
+        <param name="hardware_io_enabled">true</param>
+        <command_interface name="position">
+          <param name="min">-1.81638</param>
+          <param name="max">1.99961</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['limb4_to_limb3_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="limb5_to_limb4_joint">
+        <param name="servo_id">2</param>
+        <param name="raw_reference">512</param>
+        <param name="ros_reference">-0.008483</param>
+        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="direction">-1</param>
+        <param name="raw_min">26</param>
+        <param name="raw_max">959</param>
+        <param name="hardware_io_enabled">true</param>
+        <command_interface name="position">
+          <param name="min">-1.88087</param>
+          <param name="max">2.02727</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['limb5_to_limb4_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="gripper_left_joint">
+        <param name="servo_id">1</param>
+        <param name="raw_reference">443</param>
+        <param name="ros_reference">0.0</param>
+        <param name="units_per_raw">${gripper_units_per_raw}</param>
+        <param name="direction">1</param>
+        <!--
+          Servo 1 cable is broken.  Expose a fixed state and never address this
+          servo unless this per-joint parameter is deliberately enabled again.
+          Its ROS direction/gripper geometry has not been validated, so its ROS
+          command limits remain unchanged despite the updated raw range.
+        -->
+        <param name="raw_min">100</param>
+        <param name="raw_max">647</param>
+        <param name="hardware_io_enabled">${gripper_hardware_io_enabled}</param>
+        <command_interface name="position">
+          <param name="min">-0.015</param>
+          <param name="max">0.0112222</param>
+        </command_interface>
+        <state_interface name="position">
+          <param name="initial_value">${initial_positions['gripper_left_joint']}</param>
+        </state_interface>
+        <state_interface name="velocity"/>
+      </joint>
+
+      <joint name="gripper_right_joint">
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+  </xacro:macro>
 </robot>
