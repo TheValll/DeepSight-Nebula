@@ -1,0 +1,20 @@
+{
+  "camera_resolution": [
+    2560,
+    720
+  ],
+  "target_camera_fps": 60,
+  "camera_format": "MJPG",
+  "inference_image_resolution": [
+    640,
+    384
+  ],
+  "confidence_threshold": 0.15,
+  "coco_class": 32,
+  "selected_device": "cuda:0",
+  "gpu_name": "NVIDIA GeForce RTX 5080",
+  "operating_system": "Linux-7.0.0-30-generic-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "ultralytics_version": "8.4.146",
+  "pytorch_version": "2.14.0+cu130"
+}

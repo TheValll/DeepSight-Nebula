@@ -764,3 +764,22 @@ While measuring the mechanical limits, the cable between servos 1 and 2 broke at
 
 - Repair the cable between servos 1 and 2.
 - Validate small physical movements with `ros2_control`.
+
+### 2026-09-09 — YOLO11 benchmarks
+
+Today, I benchmarked YOLO11n, YOLO11s, and YOLO11m on the stereo camera.
+
+The camera uses MJPEG at 2560x720. The left 1280x720 image is used for detection.
+All models run on the RTX 5080 with CUDA.
+
+| Model | Detection rate | Mean inference | Mean processing | Processed FPS | GPU | VRAM |
+|:---|---:|---:|---:|---:|---:|---:|
+| YOLO11n | 80.37% | 4.23 ms | 30.34 ms | 30.00 | 9.40% | 1,259 MB |
+| YOLO11s | 82.21% | 4.38 ms | 30.58 ms | 29.96 | 10.65% | 1,372 MB |
+| YOLO11m | 56.20% | 5.15 ms | 30.37 ms | 29.94 | 17.14% | 1,513 MB |
+
+YOLO11s gave the best detection rate. Its inference time stayed close to YOLO11n.
+
+YOLO11m gave unusual detection results. I ran it a second time. The table uses this second pass.
+
+I will detail the benchmark process and results later.
