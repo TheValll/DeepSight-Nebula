@@ -1,0 +1,26 @@
+{
+  "camera_resolution": [
+    2560,
+    720
+  ],
+  "target_camera_fps": 60,
+  "camera_format": "MJPG",
+  "model": "yolo11s.pt",
+  "inference_image_resolution": [
+    1280,
+    736
+  ],
+  "confidence_threshold": 0.15,
+  "coco_class": 32,
+  "ball_type": "ping_pong",
+  "ball_color": "orange",
+  "expected_objects": 1,
+  "prompt": null,
+  "duplicate_iou_threshold": 0.8,
+  "selected_device": "cuda:0",
+  "gpu_name": "NVIDIA GeForce RTX 5080",
+  "operating_system": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+  "python_version": "3.12.3",
+  "ultralytics_version": "8.4.127",
+  "pytorch_version": "2.13.0+cu132"
+}

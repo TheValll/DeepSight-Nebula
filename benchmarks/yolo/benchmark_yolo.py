@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark a YOLO11 model using the left image from a stereo camera."""
+"""Benchmark YOLO models using the left image from a stereo camera."""
 
 import argparse
 import csv
@@ -44,10 +44,14 @@ psutil = deps["psutil"]
 torch = deps["torch"]
 ultralytics = deps["ultralytics"]
 YOLO = ultralytics.YOLO
+YOLOE = ultralytics.YOLOE
 
 
 RAW_COLUMNS = [
     "model",
+    "ball_color",
+    "prompt",
+    "expected_objects",
     "run",
     "movement",
     "frame_id",
@@ -56,6 +60,8 @@ RAW_COLUMNS = [
     "datetime_iso",
     "timestamp_s",
     "detected",
+    "detection_count",
+    "complete_detection",
     "confidence",
     "inference_ms",
     "total_processing_ms",
@@ -67,6 +73,9 @@ RAW_COLUMNS = [
 
 SUMMARY_COLUMNS = [
     "model",
+    "ball_color",
+    "prompt",
+    "expected_objects",
     "run",
     "movement",
     "date",
@@ -77,6 +86,10 @@ SUMMARY_COLUMNS = [
     "missed_frames",
     "fps",
     "detection_rate_percent",
+    "complete_detection_frames",
+    "incomplete_detection_frames",
+    "complete_detection_rate_percent",
+    "mean_detection_count",
     "mean_confidence",
     "inference_mean_ms",
     "inference_median_ms",
@@ -103,8 +116,28 @@ def parse_args():
     parser.add_argument(
         "--model",
         required=True,
-        choices=["yolo11n.pt", "yolo11s.pt", "yolo11m.pt"],
-        help="YOLO11 model to benchmark",
+        choices=[
+            "yolo11n.pt",
+            "yolo11s.pt",
+            "yolo11m.pt",
+            "yolo26n.pt",
+            "yolo26s.pt",
+            "yolo26m.pt",
+            "yoloe-26n-seg.pt",
+            "yoloe-26s-seg.pt",
+            "yoloe-26m-seg.pt",
+        ],
+        help="model to benchmark",
+    )
+    parser.add_argument(
+        "--ball-color",
+        required=True,
+        choices=["white", "orange", "both"],
+        help="ping-pong ball color; 'both' expects one white and one orange ball",
+    )
+    parser.add_argument(
+        "--prompt",
+        help="text prompt for a YOLOE model, for example 'ping pong ball'",
     )
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
     parser.add_argument(
@@ -113,7 +146,22 @@ def parse_args():
     parser.add_argument(
         "--imgsz", type=int, default=640, help="YOLO inference image size"
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--dedup-iou",
+        type=float,
+        default=0.8,
+        help="IoU threshold used to merge duplicate boxes (default: 0.8)",
+    )
+    args = parser.parse_args()
+    is_yoloe = args.model.startswith("yoloe-")
+    if is_yoloe and not args.prompt:
+        parser.error("--prompt is required with a YOLOE model")
+    if not is_yoloe and args.prompt:
+        parser.error("--prompt can only be used with a YOLOE model")
+    if not 0.0 <= args.dedup_iou <= 1.0:
+        parser.error("--dedup-iou must be between 0 and 1")
+    args.expected_objects = 2 if args.ball_color == "both" else 1
+    return args
 
 
 def open_csv(path, columns):
@@ -189,25 +237,71 @@ def read_left_frame(camera):
     return stereo_frame[:, :1280]
 
 
-def predict(model, image, device, confidence, image_size, use_cuda):
+def predict(model, image, device, confidence, image_size, use_cuda, prompted):
     if use_cuda:
         torch.cuda.synchronize()
     start = time.perf_counter()
-    results = model.predict(
-        image,
-        classes=[32],
-        conf=confidence,
-        imgsz=image_size,
-        device=device,
-        verbose=False,
-    )
+    predict_options = {
+        "conf": confidence,
+        "imgsz": image_size,
+        "device": device,
+        "verbose": False,
+    }
+    if not prompted:
+        predict_options["classes"] = [32]
+    results = model.predict(image, **predict_options)
     if use_cuda:
         torch.cuda.synchronize()
     inference_ms = (time.perf_counter() - start) * 1000.0
     return results[0], inference_ms
 
 
-def show_countdown(camera, model_name, run_number, movement):
+def intersection_over_union(box_a, box_b):
+    left = max(box_a[0], box_b[0])
+    top = max(box_a[1], box_b[1])
+    right = min(box_a[2], box_b[2])
+    bottom = min(box_a[3], box_b[3])
+    intersection = max(0.0, right - left) * max(0.0, bottom - top)
+    area_a = max(0.0, box_a[2] - box_a[0]) * max(0.0, box_a[3] - box_a[1])
+    area_b = max(0.0, box_b[2] - box_b[0]) * max(0.0, box_b[3] - box_b[1])
+    union = area_a + area_b - intersection
+    return intersection / union if union else 0.0
+
+
+def deduplicate_detections(boxes, confidences, iou_threshold):
+    """Keep the strongest box from each highly overlapping group."""
+    ordered = sorted(range(len(confidences)), key=confidences.__getitem__, reverse=True)
+    kept = []
+    for index in ordered:
+        if all(
+            intersection_over_union(boxes[index], boxes[kept_index]) <= iou_threshold
+            for kept_index in kept
+        ):
+            kept.append(index)
+    return [boxes[index] for index in kept], [confidences[index] for index in kept]
+
+
+def draw_detections(image, boxes, confidences, label):
+    annotated = image.copy()
+    for box, confidence in zip(boxes, confidences):
+        x1, y1, x2, y2 = (int(round(value)) for value in box)
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.putText(
+            annotated,
+            f"{label} {confidence:.2f}",
+            (x1, max(25, y1 - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+        )
+    return annotated
+
+
+def show_countdown(
+    camera, model_name, ball_color, expected_objects, run_number, movement
+):
     countdown_start = time.perf_counter()
     while True:
         left = read_left_frame(camera)
@@ -224,13 +318,14 @@ def show_countdown(camera, model_name, run_number, movement):
             preview,
             [
                 f"Model: {model_name}",
+                f"Ball color: {ball_color} | Expected: {expected_objects}",
                 f"Run {run_number}/5: {movement}",
                 f"Starting in: {max(1, int(np.ceil(remaining)))}",
                 "Press ESC to quit",
             ],
             color=(0, 255, 255),
         )
-        cv2.imshow("YOLO11 Stereo Benchmark - Left Camera", preview)
+        cv2.imshow("YOLO Benchmark - Left Camera", preview)
         if cv2.waitKey(1) & 0xFF == 27:
             return False
 
@@ -240,9 +335,12 @@ def mean_or_nan(values):
     return statistics.fmean(valid) if valid else float("nan")
 
 
-def build_summary(rows, model_name, run_number, movement, started_at, duration):
+def build_summary(
+    rows, args, run_number, movement, started_at, duration
+):
     processed = len(rows)
     detected = sum(row["detected"] for row in rows)
+    complete = sum(row["complete_detection"] for row in rows)
     confidences = [row["confidence"] for row in rows]
     inference = [row["inference_ms"] for row in rows]
 
@@ -254,7 +352,10 @@ def build_summary(rows, model_name, run_number, movement, started_at, duration):
         median = p95 = p99 = float("nan")
 
     return {
-        "model": model_name,
+        "model": args.model,
+        "ball_color": args.ball_color,
+        "prompt": args.prompt or "",
+        "expected_objects": args.expected_objects,
         "run": run_number,
         "movement": movement,
         "date": started_at.strftime("%Y-%m-%d"),
@@ -265,6 +366,12 @@ def build_summary(rows, model_name, run_number, movement, started_at, duration):
         "missed_frames": processed - detected,
         "fps": processed / duration if duration else 0.0,
         "detection_rate_percent": detected / processed * 100 if processed else 0.0,
+        "complete_detection_frames": complete,
+        "incomplete_detection_frames": processed - complete,
+        "complete_detection_rate_percent": complete / processed * 100 if processed else 0.0,
+        "mean_detection_count": mean_or_nan(
+            [row["detection_count"] for row in rows]
+        ),
         "mean_confidence": mean_or_nan(confidences),
         "inference_mean_ms": mean_or_nan(inference),
         "inference_median_ms": median,
@@ -289,6 +396,7 @@ def print_summary(summary):
     print(
         f"FPS: {summary['fps']:.2f} | "
         f"Detection rate: {summary['detection_rate_percent']:.2f}% | "
+        f"All expected objects: {summary['complete_detection_rate_percent']:.2f}% | "
         f"Mean confidence: {summary['mean_confidence']:.3f}"
     )
     print(
@@ -317,9 +425,15 @@ def write_metadata(path, args, device, gpu_name):
         "camera_resolution": [2560, 720],
         "target_camera_fps": 60,
         "camera_format": "MJPG",
+        "model": args.model,
         "inference_image_resolution": [inference_width, inference_height],
         "confidence_threshold": args.confidence,
-        "coco_class": 32,
+        "coco_class": None if args.prompt else 32,
+        "ball_type": "ping_pong",
+        "ball_color": args.ball_color,
+        "expected_objects": args.expected_objects,
+        "prompt": args.prompt,
+        "duplicate_iou_threshold": args.dedup_iou,
         "selected_device": device,
         "gpu_name": gpu_name,
         "operating_system": platform.platform(),
@@ -335,18 +449,35 @@ def write_metadata(path, args, device, gpu_name):
 def main():
     args = parse_args()
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    model_dir = os.path.join(script_dir, "models")
+    os.makedirs(model_dir, exist_ok=True)
     raw_path = os.path.join(script_dir, "benchmark_raw.csv")
     summary_path = os.path.join(script_dir, "benchmark_summary.csv")
-    metadata_path = os.path.join(script_dir, "benchmark_metadata.json")
+    model_label = os.path.splitext(os.path.basename(args.model))[0]
+    mode_label = "prompted" if args.prompt else "coco"
+    metadata_path = os.path.join(
+        script_dir,
+        f"benchmark_metadata_{model_label}_{mode_label}_{args.ball_color}.json",
+    )
 
     use_cuda = torch.cuda.is_available()
     device = "cuda:0" if use_cuda else "cpu"
     pynvml, gpu_handle, gpu_name = init_gpu_monitoring(0) if use_cuda else (None, None, None)
     write_metadata(metadata_path, args, device, gpu_name)
 
-    print(f"Loading {args.model} on {device}...")
+    print(f"Loading {args.model} on {device} from {model_dir}...")
     try:
-        model = YOLO(args.model)
+        previous_directory = os.getcwd()
+        os.chdir(model_dir)
+        try:
+            if args.prompt:
+                model = YOLOE(args.model)
+                print(f"Encoding text prompt: {args.prompt!r}")
+                model.set_classes([args.prompt])
+            else:
+                model = YOLO(args.model)
+        finally:
+            os.chdir(previous_directory)
     except Exception as error:
         print(f"Could not load model {args.model}: {error}", file=sys.stderr)
         return 1
@@ -406,7 +537,15 @@ def main():
             if frame is None:
                 print("Camera read failed during warm-up.", file=sys.stderr)
                 return 1
-            predict(model, frame, device, args.confidence, args.imgsz, use_cuda)
+            predict(
+                model,
+                frame,
+                device,
+                args.confidence,
+                args.imgsz,
+                use_cuda,
+                prompted=bool(args.prompt),
+            )
 
         actual_yolo_device = str(model.predictor.device)
         print(f"YOLO inference device: {actual_yolo_device}")
@@ -431,6 +570,8 @@ def main():
                     preview,
                     [
                         f"Model: {args.model}",
+                        f"Ball: {args.ball_color} | Expected: {args.expected_objects}",
+                        f"Prompt: {args.prompt or 'COCO sports ball'}",
                         f"Run {run_index + 1}/5: {MOVEMENTS[run_index]}",
                         "Press SPACE to start",
                         "Press ESC to quit",
@@ -439,11 +580,16 @@ def main():
             else:
                 put_lines(
                     preview,
-                    [f"Model: {args.model}", "All 5 runs complete", "Press ESC to quit"],
+                    [
+                        f"Model: {args.model}",
+                        f"Ball: {args.ball_color} | Expected: {args.expected_objects}",
+                        "All 5 runs complete",
+                        "Press ESC to quit",
+                    ],
                     color=(0, 255, 0),
                 )
 
-            cv2.imshow("YOLO11 Stereo Benchmark - Left Camera", preview)
+            cv2.imshow("YOLO Benchmark - Left Camera", preview)
             key = cv2.waitKey(1) & 0xFF
             if key == 27:
                 break
@@ -452,7 +598,14 @@ def main():
 
             run_number = run_index + 1
             movement = MOVEMENTS[run_index]
-            if not show_countdown(camera, args.model, run_number, movement):
+            if not show_countdown(
+                camera,
+                args.model,
+                args.ball_color,
+                args.expected_objects,
+                run_number,
+                movement,
+            ):
                 break
 
             rows = []
@@ -471,15 +624,33 @@ def main():
 
                 frame_timestamp = time.perf_counter() - run_start
                 result, inference_ms = predict(
-                    model, left, device, args.confidence, args.imgsz, use_cuda
+                    model,
+                    left,
+                    device,
+                    args.confidence,
+                    args.imgsz,
+                    use_cuda,
+                    prompted=bool(args.prompt),
                 )
 
                 confidences = []
+                boxes = []
                 if result.boxes is not None and result.boxes.conf is not None:
                     confidences = result.boxes.conf.detach().cpu().tolist()
-                detected = int(bool(confidences))
+                    boxes = result.boxes.xyxy.detach().cpu().tolist()
+                boxes, confidences = deduplicate_detections(
+                    boxes, confidences, args.dedup_iou
+                )
+                detection_count = len(confidences)
+                detected = int(detection_count > 0)
+                complete_detection = int(detection_count >= args.expected_objects)
                 confidence = max(confidences, default=0.0)
-                annotated = result.plot()
+                annotated = draw_detections(
+                    left,
+                    boxes,
+                    confidences,
+                    args.prompt or "sports ball",
+                )
 
                 cpu_percent = psutil.cpu_percent(interval=None)
                 ram_mb = psutil.virtual_memory().used / (1024 * 1024)
@@ -490,6 +661,9 @@ def main():
                 now = datetime.now()
                 row = {
                     "model": args.model,
+                    "ball_color": args.ball_color,
+                    "prompt": args.prompt or "",
+                    "expected_objects": args.expected_objects,
                     "run": run_number,
                     "movement": movement,
                     "frame_id": frame_id,
@@ -498,6 +672,8 @@ def main():
                     "datetime_iso": now.isoformat(timespec="milliseconds"),
                     "timestamp_s": frame_timestamp,
                     "detected": detected,
+                    "detection_count": detection_count,
+                    "complete_detection": complete_detection,
                     "confidence": confidence,
                     "inference_ms": inference_ms,
                     "total_processing_ms": total_processing_ms,
@@ -515,14 +691,17 @@ def main():
                 put_lines(
                     annotated,
                     [
-                        f"Model: {args.model} | Run {run_number}/5 | {movement}",
+                        f"Model: {args.model} | Ball: {args.ball_color}",
+                        f"Run {run_number}/5 | {movement}",
                         f"Elapsed: {frame_timestamp:.2f} / 10.00 s",
-                        f"Frames: {frame_id} | Detected frames: {detected_count}",
+                        f"Frames: {frame_id} | Any: {detected_count}",
+                        f"All {args.expected_objects}: "
+                        f"{sum(item['complete_detection'] for item in rows)}",
                         "Press ESC to quit",
                     ],
                     color=(0, 255, 0),
                 )
-                cv2.imshow("YOLO11 Stereo Benchmark - Left Camera", annotated)
+                cv2.imshow("YOLO Benchmark - Left Camera", annotated)
                 if cv2.waitKey(1) & 0xFF == 27:
                     quit_requested = True
                     break
@@ -535,7 +714,12 @@ def main():
                 break
 
             summary = build_summary(
-                rows, args.model, run_number, movement, run_started_at, duration
+                rows,
+                args,
+                run_number,
+                movement,
+                run_started_at,
+                duration,
             )
             summary_writer.writerow(summary)
             summary_file.flush()

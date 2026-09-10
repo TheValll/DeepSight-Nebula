@@ -4,6 +4,7 @@ yolov8x.pt
 yolov8x.engine
 yolo11n.pt
 yolo11s.pt
+yolo11m.pt
 .vs
 __pycache__
 log
@@ -16,6 +17,9 @@ images
 # Local tennis-ball training captures (potentially large)
 /datasets/tennis_ball/videos/
 /datasets/tennis_ball/frames/
+
+# Downloaded benchmark model assets
+/benchmarks/yolo/models/
 
 # C and C++ compilation artifacts
 *.o

@@ -35,7 +35,7 @@ intervention.
    (Hiwonder xArm ESP32).
 3. **Firmware & I/O** — Replace the stock MicroPython firmware with a lean USB-passthrough firmware (C or Rust) to
    minimize command latency on the serial path, with a before/after benchmark.
-4. **End-to-end demonstration** — Chain the full perception → planning → actuation loop on a simple target (tennis
+4. **End-to-end demonstration** — Chain the full perception → planning → actuation loop on a simple target (ping-pong
    ball) as a first version, then generalize to broader object categories.
 
 ### Scope
@@ -74,20 +74,31 @@ This project was developed on an **Ubuntu Linux** container in a **Fedora Linux*
 
 ### Installation & Execution
 
-#### Python Environnement Documentation :
+#### Python Environment
 
-For my RTX 5080 (this may vary depending on your GPU):
+From the project root, create one virtual environment for the complete project.
+These PyTorch packages are for my RTX 5080 and may differ for another GPU:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip setuptools wheel
 python -m pip install "torch==2.13.0+cu132" "torchvision==0.28.0+cu132" \
   --index-url https://download.pytorch.org/whl/cu132 \
   --no-cache-dir
-python -m pip install "numpy==1.26.4" "opencv-python==4.10.0.84" typeguard ultralytics
-python -m pip install -U ultralytics
-python -m pip install typeguard
+python -m pip install \
+  "numpy==1.26.4" \
+  "opencv-python==4.10.0.84" \
+  "typeguard==4.6.0" \
+  "ultralytics==8.4.127" \
+  "psutil==7.2.2" \
+  "nvidia-ml-py==13.610.43"
+```
+
+Check the environment:
+
+```bash
+.venv/bin/python -c "import cv2, numpy, psutil, pynvml, torch, ultralytics; print('CUDA:', torch.cuda.is_available())"
 ```
 
 #### ROS 2 Packages Documentation :
@@ -110,6 +121,19 @@ This package contains an application to calibrate a stereo camera.
 
 - A stereo camera connected via USB.
 - A 9x6 Chessboard with 25mm squares.
+
+###### Camera anti-flicker (Linux)
+
+In countries using a 50 Hz electrical grid, such as France, set the camera anti-flicker frequency before recording
+datasets or running benchmarks. A direct USB connection is recommended:
+
+```bash
+v4l2-ctl --list-devices
+v4l2-ctl -d /dev/video0 --set-ctrl=power_line_frequency=1
+v4l2-ctl -d /dev/video0 --get-ctrl=power_line_frequency
+```
+
+The camera device may differ from `/dev/video0`, and the setting may need to be reapplied after reconnecting it.
 
 Configuration: If your chessboard dimensions differ, please modify the configuration in:
 
@@ -136,7 +160,7 @@ source ../.venv/bin/activate
 ros2 run stereo_camera_calibration yolo_detection_node
 ```
 
-By default, the YOLO node only displays COCO class `32` (`sports ball`), which includes tennis balls. Override the
+By default, the YOLO node only displays COCO class `32` (`sports ball`), which includes ping-pong balls. Override the
 `classes` ROS 2 parameter to select one or more classes:
 
 ```bash
@@ -293,7 +317,7 @@ It has been four months since my last update — mainly due to lack of time and 
 
 **Outline update.** The project now has a clearer spine:
 
-1. **Goal** — autonomously pick up an object (starting with a tennis ball).
+1. **Goal** — autonomously pick up an object (starting with a ping-pong ball).
 2. **AI / vision** — use **YOLOv8** for object detection.
 3. **Depth** — use the stereo camera and OpenCV to build a depth map and recover the object's 3D position.
 4. **Motion** — learn **URDF** to model the robot and **MoveIt** to plan the trajectory.
@@ -741,7 +765,7 @@ The Rust firmware reduces the mean end-to-end read latency by approximately 93.2
 
 ### 2026-08-24 — Stereo depth, YOLO and RViz
 
-Today, I connected complete perception pipeline. Stereo calibration, OpenCV rectification and StereoSGBM generate metric depth in real time. YOLO11s detects tennis ball on RTX 5080 and combines detection with
+Today, I connected complete perception pipeline. Stereo calibration, OpenCV rectification and StereoSGBM generate metric depth in real time. YOLO11s detects a ping-pong ball on RTX 5080 and combines detection with
 median depth.
 
 ![RViz perception](schemas/schema18.png)
@@ -765,21 +789,27 @@ While measuring the mechanical limits, the cable between servos 1 and 2 broke at
 - Repair the cable between servos 1 and 2.
 - Validate small physical movements with `ros2_control`.
 
-### 2026-09-09 — YOLO11 benchmarks
+### 2026-09-10 — Ping-pong ball benchmarks
 
-Today, I benchmarked YOLO11n, YOLO11s, and YOLO11m on the stereo camera.
+I ran 18 benchmarks with orange and white ping-pong balls. All models use a 1280 image on the RTX 5080.
+The standard models use a 0.15 confidence threshold. Prompted models use 0.50.
 
-The camera uses MJPEG at 2560x720. The left 1280x720 image is used for detection.
-All models run on the RTX 5080 with CUDA.
+![Ping-pong ball benchmark environment](schemas/schema20.jpg)
 
-| Model | Detection rate | Mean inference | Mean processing | Processed FPS | GPU | VRAM |
-|:---|---:|---:|---:|---:|---:|---:|
-| YOLO11n | 80.37% | 4.23 ms | 30.34 ms | 30.00 | 9.40% | 1,259 MB |
-| YOLO11s | 82.21% | 4.38 ms | 30.58 ms | 29.96 | 10.65% | 1,372 MB |
-| YOLO11m | 56.20% | 5.15 ms | 30.37 ms | 29.94 | 17.14% | 1,513 MB |
+| Model | Orange | White | Inference | GPU | VRAM |
+|:---|---:|---:|---:|---:|---:|
+| YOLO11n | 4.20% | 34.40% | 6.58 ms | 9.13% | 1,330 MB |
+| YOLO11s | 0.00% | 19.27% | 6.57 ms | 12.77% | 1,397 MB |
+| YOLO11m | 19.80% | 23.18% | 9.17 ms | 23.92% | 1,620 MB |
+| YOLO26n | 0.20% | 0.00% | 6.73 ms | 9.77% | 1,325 MB |
+| YOLO26s | 0.47% | 0.07% | 6.84 ms | 13.97% | 1,456 MB |
+| YOLO26m | 2.60% | 18.25% | 9.14 ms | 24.18% | 1,617 MB |
+| YOLOE-26n + prompt | 42.60% | 32.38% | 7.34 ms | 11.75% | 1,396 MB |
+| YOLOE-26s + prompt | 36.90% | 53.73% | 8.14 ms | 17.94% | 1,467 MB |
+| YOLOE-26m + prompt | 81.68% | 84.86% | 12.71 ms | 34.42% | 1,740 MB |
 
-YOLO11s gave the best detection rate. Its inference time stayed close to YOLO11n.
+YOLOE-26m is the best model. It reaches 83.27% detection overall and stays close to 30 FPS.
+Its weakest movement is free depth motion at 58.30%.
 
-YOLO11m gave unusual detection results. I ran it a second time. The table uses this second pass.
-
-I will detail the benchmark process and results later.
+The prompt makes a large difference. Standard YOLO11 and YOLO26 are not reliable enough here.
+System RAM stayed between 3.9 and 4.2 GB.
