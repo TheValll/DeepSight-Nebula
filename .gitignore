@@ -13,6 +13,10 @@ install
 fusion360_xarm32.zip
 images
 
+# Local tennis-ball training captures (potentially large)
+/datasets/tennis_ball/videos/
+/datasets/tennis_ball/frames/
+
 # C and C++ compilation artifacts
 *.o
 *.obj
