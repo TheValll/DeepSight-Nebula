@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Benchmark an Ultralytics YOLO model using the left stereo-camera image."""
+"""Benchmark a YOLO11 model using the left image from a stereo camera."""
 
 import argparse
 import csv
 import json
 import os
 import platform
-import re
 import statistics
 import sys
 import time
@@ -104,20 +103,8 @@ def parse_args():
     parser.add_argument(
         "--model",
         required=True,
-        help="Ultralytics model name or path to a custom .pt model",
-    )
-    parser.add_argument(
-        "--benchmark-name",
-        help=(
-            "Name stored in the CSV files and used for the metadata filename "
-            "(defaults to the model filename)"
-        ),
-    )
-    parser.add_argument(
-        "--class-id",
-        type=int,
-        default=32,
-        help="Model class ID to detect (default: 32, COCO sports ball)",
+        choices=["yolo11n.pt", "yolo11s.pt", "yolo11m.pt"],
+        help="YOLO11 model to benchmark",
     )
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
     parser.add_argument(
@@ -202,13 +189,13 @@ def read_left_frame(camera):
     return stereo_frame[:, :1280]
 
 
-def predict(model, image, device, confidence, image_size, class_id, use_cuda):
+def predict(model, image, device, confidence, image_size, use_cuda):
     if use_cuda:
         torch.cuda.synchronize()
     start = time.perf_counter()
     results = model.predict(
         image,
-        classes=[class_id],
+        classes=[32],
         conf=confidence,
         imgsz=image_size,
         device=device,
@@ -319,7 +306,7 @@ def print_summary(summary):
     )
 
 
-def write_metadata(path, args, benchmark_name, class_name, device, gpu_name):
+def write_metadata(path, args, device, gpu_name):
     # A 1280x720 frame becomes 640x384 with Ultralytics' default rectangular
     # letterboxing at imgsz=640. This is also how the ROS 2 YOLO node runs.
     inference_width = int(np.ceil(args.imgsz / 32) * 32)
@@ -327,15 +314,12 @@ def write_metadata(path, args, benchmark_name, class_name, device, gpu_name):
         np.ceil((720 / 1280) * inference_width / 32) * 32
     )
     metadata = {
-        "benchmark_name": benchmark_name,
-        "model_source": args.model,
         "camera_resolution": [2560, 720],
         "target_camera_fps": 60,
         "camera_format": "MJPG",
         "inference_image_resolution": [inference_width, inference_height],
         "confidence_threshold": args.confidence,
-        "target_class_id": args.class_id,
-        "target_class_name": class_name,
+        "coco_class": 32,
         "selected_device": device,
         "gpu_name": gpu_name,
         "operating_system": platform.platform(),
@@ -351,50 +335,21 @@ def write_metadata(path, args, benchmark_name, class_name, device, gpu_name):
 def main():
     args = parse_args()
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    benchmark_name = args.benchmark_name or os.path.basename(args.model)
-    metadata_slug = re.sub(r"[^A-Za-z0-9_.-]+", "_", benchmark_name).strip("._")
-    if not metadata_slug:
-        print(
-            "The benchmark name must contain at least one usable character.",
-            file=sys.stderr,
-        )
-        return 1
     raw_path = os.path.join(script_dir, "benchmark_raw.csv")
     summary_path = os.path.join(script_dir, "benchmark_summary.csv")
-    metadata_path = os.path.join(
-        script_dir, f"benchmark_metadata_{metadata_slug}.json"
-    )
+    metadata_path = os.path.join(script_dir, "benchmark_metadata.json")
 
     use_cuda = torch.cuda.is_available()
     device = "cuda:0" if use_cuda else "cpu"
     pynvml, gpu_handle, gpu_name = init_gpu_monitoring(0) if use_cuda else (None, None, None)
+    write_metadata(metadata_path, args, device, gpu_name)
+
     print(f"Loading {args.model} on {device}...")
     try:
         model = YOLO(args.model)
     except Exception as error:
         print(f"Could not load model {args.model}: {error}", file=sys.stderr)
         return 1
-
-    class_names = model.names
-    if isinstance(class_names, dict):
-        class_name = class_names.get(args.class_id)
-    elif 0 <= args.class_id < len(class_names):
-        class_name = class_names[args.class_id]
-    else:
-        class_name = None
-    if class_name is None:
-        print(
-            f"Class ID {args.class_id} is not defined by this model. "
-            f"Available classes: {class_names}",
-            file=sys.stderr,
-        )
-        return 1
-
-    print(f"Benchmark name: {benchmark_name}")
-    print(f"Target class: {args.class_id} ({class_name})")
-    write_metadata(
-        metadata_path, args, benchmark_name, class_name, device, gpu_name
-    )
 
     camera = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
     camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -451,15 +406,7 @@ def main():
             if frame is None:
                 print("Camera read failed during warm-up.", file=sys.stderr)
                 return 1
-            predict(
-                model,
-                frame,
-                device,
-                args.confidence,
-                args.imgsz,
-                args.class_id,
-                use_cuda,
-            )
+            predict(model, frame, device, args.confidence, args.imgsz, use_cuda)
 
         actual_yolo_device = str(model.predictor.device)
         print(f"YOLO inference device: {actual_yolo_device}")
@@ -483,7 +430,7 @@ def main():
                 put_lines(
                     preview,
                     [
-                        f"Model: {benchmark_name}",
+                        f"Model: {args.model}",
                         f"Run {run_index + 1}/5: {MOVEMENTS[run_index]}",
                         "Press SPACE to start",
                         "Press ESC to quit",
@@ -492,11 +439,7 @@ def main():
             else:
                 put_lines(
                     preview,
-                    [
-                        f"Model: {benchmark_name}",
-                        "All 5 runs complete",
-                        "Press ESC to quit",
-                    ],
+                    [f"Model: {args.model}", "All 5 runs complete", "Press ESC to quit"],
                     color=(0, 255, 0),
                 )
 
@@ -509,7 +452,7 @@ def main():
 
             run_number = run_index + 1
             movement = MOVEMENTS[run_index]
-            if not show_countdown(camera, benchmark_name, run_number, movement):
+            if not show_countdown(camera, args.model, run_number, movement):
                 break
 
             rows = []
@@ -528,13 +471,7 @@ def main():
 
                 frame_timestamp = time.perf_counter() - run_start
                 result, inference_ms = predict(
-                    model,
-                    left,
-                    device,
-                    args.confidence,
-                    args.imgsz,
-                    args.class_id,
-                    use_cuda,
+                    model, left, device, args.confidence, args.imgsz, use_cuda
                 )
 
                 confidences = []
@@ -552,7 +489,7 @@ def main():
                 frame_id += 1
                 now = datetime.now()
                 row = {
-                    "model": benchmark_name,
+                    "model": args.model,
                     "run": run_number,
                     "movement": movement,
                     "frame_id": frame_id,
@@ -578,7 +515,7 @@ def main():
                 put_lines(
                     annotated,
                     [
-                        f"Model: {benchmark_name} | Run {run_number}/5 | {movement}",
+                        f"Model: {args.model} | Run {run_number}/5 | {movement}",
                         f"Elapsed: {frame_timestamp:.2f} / 10.00 s",
                         f"Frames: {frame_id} | Detected frames: {detected_count}",
                         "Press ESC to quit",
@@ -598,7 +535,7 @@ def main():
                 break
 
             summary = build_summary(
-                rows, benchmark_name, run_number, movement, run_started_at, duration
+                rows, args.model, run_number, movement, run_started_at, duration
             )
             summary_writer.writerow(summary)
             summary_file.flush()
