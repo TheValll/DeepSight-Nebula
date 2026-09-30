@@ -33,3 +33,6 @@ arm_controller:
 gripper_controller:
   ros__parameters:
     joint: gripper_left_joint
+    # The physical servo movement lasts 1 s; keep enough margin before
+    # reporting a stalled goal to MoveIt.
+    stall_timeout: 2.0

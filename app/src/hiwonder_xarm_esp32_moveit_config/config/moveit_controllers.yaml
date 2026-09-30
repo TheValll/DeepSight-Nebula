@@ -2,6 +2,12 @@
 
 moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
 
+# The gripper servo takes 1 s to complete a physical movement. Keep MoveIt
+# from cancelling the action before the gripper controller reaches its goal.
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.2
+  allowed_goal_duration_margin: 2.0
+
 moveit_simple_controller_manager:
   controller_names:
     - arm_controller

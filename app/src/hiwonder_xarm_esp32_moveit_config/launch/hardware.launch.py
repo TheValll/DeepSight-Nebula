@@ -24,7 +24,7 @@ def generate_launch_description():
             mappings={
                 'use_mock_hardware': 'false',
                 'serial_port': serial_port,
-                'gripper_hardware_io_enabled': 'false',
+                'gripper_hardware_io_enabled': 'true',
                 'read_only': 'false',
             }
         )

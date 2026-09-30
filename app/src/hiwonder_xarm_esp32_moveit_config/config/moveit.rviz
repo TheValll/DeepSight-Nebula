@@ -15,6 +15,8 @@ Visualization Manager:
       Value: true
     - Class: moveit_rviz_plugin/MotionPlanning
       Name: MotionPlanning
+      Velocity_Scaling_Factor: 1.0
+      Acceleration_Scaling_Factor: 1.0
       Planned Path:
         Loop Animation: true
         State Display Time: 0.05 s
@@ -26,8 +28,55 @@ Visualization Manager:
       Scene Robot:
         Robot Alpha: 0.5
       Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Stereo point cloud
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /stereo/points
+      Color Transformer: RGB8
+      Position Transformer: XYZ
+      Size (Pixels): 2
+      Style: Points
+      Decay Time: 0
+    - Class: rviz_default_plugins/MarkerArray
+      Name: YOLO 3D detections
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /yolo/markers
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Ball goal preview
+      Enabled: true
+      Value: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /ball_goal/markers
+    - Class: rviz_default_plugins/Image
+      Name: YOLO annotated image
+      Enabled: true
+      Value: true
+      Normalize Range: true
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /yolo/image_annotated
   Global Options:
     Fixed Frame: base_link
+    Frame Rate: 30
   Tools:
     - Class: rviz_default_plugins/Interact
     - Class: rviz_default_plugins/MoveCamera

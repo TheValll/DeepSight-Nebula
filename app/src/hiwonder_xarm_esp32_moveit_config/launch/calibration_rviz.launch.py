@@ -1,9 +1,8 @@
 """Read-only RViz calibration launch for measured joint-state verification.
 
 This launch deliberately starts no MoveIt process and configures no position
-controller.  HiwonderSystem receives read_only:=true, so even an accidental
-position command cannot result in a servo move.  Servo 1 is additionally
-excluded from all hardware I/O because its cable is unavailable.
+controller. HiwonderSystem receives read_only:=true, so even an accidental
+position command cannot result in a servo move. All six servos are read.
 """
 
 import os
@@ -72,7 +71,7 @@ def generate_launch_description():
                 ' initial_positions_file:=', initial_positions,
                 ' use_mock_hardware:=false',
                 ' serial_port:=', serial_port,
-                ' gripper_hardware_io_enabled:=false',
+                ' gripper_hardware_io_enabled:=true',
                 ' read_only:=true',
             ]
         )

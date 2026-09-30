@@ -3,6 +3,14 @@
 
   <!-- ==================== GRIPPER (prismatic simplification) ==================== -->
 
+  <!-- Tool centre point: measured centre between the two gripping fingers. -->
+  <link name="gripper_tcp_link"/>
+  <joint name="gripper_tcp_joint" type="fixed">
+    <origin xyz="0.0 -0.08 0.0" rpy="0.0 0.0 0.0"/>
+    <parent link="limb5_link"/>
+    <child link="gripper_tcp_link"/>
+  </joint>
+
   <!-- Gears, fixed visual elements -->
   <link name="gear_left_link">
     <inertial>
@@ -85,7 +93,7 @@
     <parent link="limb5_link"/>
     <child link="gripper_left_link"/>
     <axis xyz="1.0 0.0 0.0"/>
-    <limit lower="-0.015" upper="0.015" effort="10" velocity="0.1"/>
+    <limit lower="-0.013921" upper="0.013921" effort="10" velocity="0.1"/>
   </joint>
 
   <!-- Right finger, mimic left -->
@@ -115,7 +123,7 @@
     <parent link="limb5_link"/>
     <child link="gripper_right_link"/>
     <axis xyz="1.0 0.0 0.0"/>
-    <limit lower="-0.015" upper="0.015" effort="10" velocity="0.1"/>
+    <limit lower="-0.013921" upper="0.013921" effort="10" velocity="0.1"/>
     <mimic joint="gripper_left_joint" multiplier="-1" offset="0"/>
   </joint>
 

@@ -24,6 +24,7 @@ struct JointCalibration
   double direction{1.0};
   std::int16_t raw_min{0};
   std::int16_t raw_max{1000};
+  std::uint16_t movement_duration_ms{40};
   bool hardware_io_enabled{true};
 
   double raw_to_joint(std::int16_t raw) const;

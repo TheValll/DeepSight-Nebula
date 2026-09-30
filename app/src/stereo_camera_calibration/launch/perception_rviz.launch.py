@@ -8,8 +8,10 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     calibration_file = LaunchConfiguration("calibration_file")
+    camera_index = LaunchConfiguration("camera_index")
     model = LaunchConfiguration("model")
     confidence = LaunchConfiguration("confidence")
+    prompt = LaunchConfiguration("prompt")
     urdf = PathJoinSubstitution(
         [FindPackageShare("hiwonder_xarm_esp32_description"), "urdf", "hiwonder_esp32.urdf.xacro"]
     )
@@ -22,8 +24,13 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "calibration_file", default_value="calibration/stereo_calib.xml"
             ),
-            DeclareLaunchArgument("model", default_value="yolo11s.pt"),
-            DeclareLaunchArgument("confidence", default_value="0.15"),
+            DeclareLaunchArgument("camera_index", default_value="2"),
+            DeclareLaunchArgument(
+                "model",
+                default_value="../benchmarks/yolo/models/yoloe-26m-seg.pt",
+            ),
+            DeclareLaunchArgument("confidence", default_value="0.50"),
+            DeclareLaunchArgument("prompt", default_value="ping pong ball"),
             Node(
                 package="robot_state_publisher",
                 executable="robot_state_publisher",
@@ -41,10 +48,10 @@ def generate_launch_description():
                 executable="joint_state_publisher_gui",
                 parameters=[
                     {
-                        "zeros.limb1_to_base_link_joint": 0.015082,
-                        "zeros.limb2_to_limb1_joint": 1.550816,
-                        "zeros.limb3_to_limb2_joint": 1.550816,
-                        "zeros.limb4_to_limb3_joint": -1.573432,
+                        "zeros.limb1_to_base_link_joint": 0.048592,
+                        "zeros.limb2_to_limb1_joint": 1.148692,
+                        "zeros.limb3_to_limb2_joint": 1.140315,
+                        "zeros.limb4_to_limb3_joint": -1.759371,
                         "zeros.limb5_to_limb4_joint": -0.008483,
                         "zeros.gripper_left_joint": 0.0,
                     }
@@ -57,6 +64,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "calibration_file": calibration_file,
+                        "camera_index": camera_index,
                         "show_debug_windows": False,
                     }
                 ],
@@ -69,8 +77,21 @@ def generate_launch_description():
                     {
                         "model": model,
                         "confidence": confidence,
-                        "classes": [32],
+                        "imgsz": 1280,
+                        "prompt": prompt,
                         "show_window": False,
+                    }
+                ],
+                output="screen",
+            ),
+            Node(
+                package="stereo_camera_calibration",
+                executable="ball_goal_preview_node",
+                parameters=[
+                    {
+                        "target_frame": "base_link",
+                        "pregrasp_height": 0.05,
+                        "sample_count": 10,
                     }
                 ],
                 output="screen",

@@ -3,8 +3,7 @@
     <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
     <xacro:arg name="use_mock_hardware" default="true" />
     <xacro:arg name="serial_port" default="/dev/ttyUSB0" />
-    <!-- Keep ID 1 isolated until its broken cable has been repaired and revalidated. -->
-    <xacro:arg name="gripper_hardware_io_enabled" default="false" />
+    <xacro:arg name="gripper_hardware_io_enabled" default="true" />
     <xacro:arg name="read_only" default="false" />
 
     <!-- Import hiwonder_esp32 urdf file -->

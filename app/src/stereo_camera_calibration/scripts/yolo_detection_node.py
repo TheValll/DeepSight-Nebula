@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 import cv2
 import message_filters
 import numpy as np
@@ -9,7 +11,7 @@ from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, Image
-from ultralytics import YOLO
+from ultralytics import YOLO, YOLOE
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -19,14 +21,28 @@ class YoloDetectionNode(Node):
 
         model_path = self.declare_parameter("model", "yolo11n.pt").value
         self.confidence = float(self.declare_parameter("confidence", 0.4).value)
+        self.image_size = int(self.declare_parameter("imgsz", 640).value)
         self.device = str(self.declare_parameter("device", "0").value)
         self.classes = list(self.declare_parameter("classes", [32]).value)
+        self.prompt = str(self.declare_parameter("prompt", "").value)
         self.minimum_depth = float(self.declare_parameter("minimum_depth", 0.15).value)
         self.maximum_depth = float(self.declare_parameter("maximum_depth", 2.0).value)
         self.show_window = bool(self.declare_parameter("show_window", True).value)
 
         self.bridge = CvBridge()
-        self.model = YOLO(model_path)
+        previous_directory = os.getcwd()
+        resolved_model_path = os.path.abspath(os.path.expanduser(model_path))
+        try:
+            if os.path.isfile(resolved_model_path):
+                os.chdir(os.path.dirname(resolved_model_path))
+                model_path = os.path.basename(resolved_model_path)
+            if self.prompt:
+                self.model = YOLOE(model_path)
+                self.model.set_classes([self.prompt])
+            else:
+                self.model = YOLO(model_path)
+        finally:
+            os.chdir(previous_directory)
         self.window_initialized = False
         self.depth_intrinsics = None
 
@@ -61,7 +77,8 @@ class YoloDetectionNode(Node):
 
         self.get_logger().info(
             f"Loaded {model_path} on CUDA device {self.device}; "
-            f"class filter: {self.classes or 'all'}; waiting for stereo topics"
+            f"target: {self.prompt or self.classes or 'all'}; "
+            f"imgsz: {self.image_size}; waiting for stereo topics"
         )
 
     def store_camera_info(self, message: CameraInfo) -> None:
@@ -77,13 +94,16 @@ class YoloDetectionNode(Node):
         image = self.bridge.imgmsg_to_cv2(image_message, desired_encoding="bgr8")
         depth = self.bridge.imgmsg_to_cv2(depth_message, desired_encoding="32FC1")
 
-        result = self.model.predict(
-            source=image,
-            conf=self.confidence,
-            classes=self.classes or None,
-            device=self.device,
-            verbose=False,
-        )[0]
+        predict_options = {
+            "source": image,
+            "conf": self.confidence,
+            "imgsz": self.image_size,
+            "device": self.device,
+            "verbose": False,
+        }
+        if not self.prompt:
+            predict_options["classes"] = self.classes or None
+        result = self.model.predict(**predict_options)[0]
         annotated = result.plot()
 
         image_height, image_width = image.shape[:2]

@@ -50,8 +50,8 @@
     <origin xyz="-0.000088 0.002467 0.037808" rpy="0.0 0.0 0.0"/>
     <parent link="base_link"/>
     <child link="limb1_link"/>
-    <axis xyz="0.0 0.0 -1.0"/>
-    <limit lower="-2.793" upper="2.793" effort="10" velocity="2.0"/>
+    <axis xyz="0.0 0.0 1.0"/>
+    <limit lower="-1.999726" upper="2.021513" effort="10" velocity="2.0"/>
   </joint>
 
   <link name="limb2_link">
@@ -138,7 +138,7 @@
     <parent link="limb3_link"/>
     <child link="limb4_link"/>
     <axis xyz="-1.0 0.0012 0.0002"/>
-    <limit lower="-2.094" upper="2.094" effort="17" velocity="2.7"/>
+    <limit lower="-1.780316" upper="1.558151" effort="17" velocity="2.7"/>
   </joint>
 
   <!-- ==================== WRIST (limb5 = gripper base) ==================== -->
@@ -168,8 +168,8 @@
     <origin xyz="0.020801 -0.052531 0.0" rpy="-0.001296 1.134464 -0.000736"/>
     <parent link="limb4_link"/>
     <child link="limb5_link"/>
-    <axis xyz="0.0 1.0 0.0"/>
-    <limit lower="-1.571" upper="1.571" effort="25" velocity="2.6"/>
+    <axis xyz="0.0 -1.0 0.0"/>
+    <limit lower="-1.562524" upper="1.365440" effort="25" velocity="2.6"/>
   </joint>
 
 </robot>

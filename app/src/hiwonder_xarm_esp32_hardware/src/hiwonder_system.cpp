@@ -177,6 +177,17 @@ hardware_interface::CallbackReturn HiwonderSystem::on_init(
       calibration.direction = required_double(joint, "direction");
       calibration.raw_min = static_cast<std::int16_t>(required_int(joint, "raw_min"));
       calibration.raw_max = static_cast<std::int16_t>(required_int(joint, "raw_max"));
+      calibration.movement_duration_ms = movement_duration_ms_;
+      if (const auto duration = joint.parameters.find("movement_duration_ms");
+        duration != joint.parameters.end())
+      {
+        const int duration_ms = std::stoi(duration->second);
+        if (duration_ms < 1 || duration_ms > 60000) {
+          throw std::invalid_argument(
+                  "joint '" + joint.name + "' has invalid movement_duration_ms");
+        }
+        calibration.movement_duration_ms = static_cast<std::uint16_t>(duration_ms);
+      }
       calibration.hardware_io_enabled = required_bool(joint, "hardware_io_enabled");
 
       if (servo_id < 1 || servo_id > 254 || !servo_ids.insert(servo_id).second) {
@@ -348,7 +359,8 @@ hardware_interface::return_type HiwonderSystem::write(
       }
       const auto raw = joints_[index].joint_to_safe_raw(command);
       if (raw != last_written_raw_[index]) {
-        driver_->move(joints_[index].servo_id, raw, movement_duration_ms_);
+        driver_->move(
+          joints_[index].servo_id, raw, joints_[index].movement_duration_ms);
         last_written_raw_[index] = raw;
       }
     }

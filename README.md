@@ -184,11 +184,11 @@ source ../.venv/bin/activate
 ros2 launch stereo_camera_calibration perception_rviz.launch.py
 ```
 
-The launch uses `yolo11s.pt`, confidence `0.15`, and COCO class `32` (`sports ball`) by default. The model and
-confidence can be overridden with launch arguments, for example:
+The launch uses `yoloe-26m-seg.pt`, the `ping pong ball` prompt, confidence `0.50`, and a 1280 image by default.
+The model, prompt, confidence, and camera index can be overridden with launch arguments, for example:
 
 ```bash
-ros2 launch stereo_camera_calibration perception_rviz.launch.py model:=yolo11x.pt confidence:=0.2
+ros2 launch stereo_camera_calibration perception_rviz.launch.py camera_index:=2
 ```
 
 ###### How it works
@@ -208,6 +208,16 @@ Launch MoveIt with RViz (planning + execution on the mock hardware):
 
 ```bash
 ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py
+```
+
+Launch MoveIt with RViz on the real robot from the project root:
+
+```bash
+cd /home/valentin/DeepSight-Nebula
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py \
+  serial_port:=/dev/ttyUSB0 use_rviz:=true
 ```
 
 ---
@@ -813,3 +823,21 @@ Its weakest movement is free depth motion at 58.30%.
 
 The prompt makes a large difference. Standard YOLO11 and YOLO26 are not reliable enough here.
 System RAM stayed between 3.9 and 4.2 GB.
+
+### 2026-09-30 — MoveIt replanning
+
+Today, I connected and tested the physical robot with MoveIt.
+
+![Physical robot connected to MoveIt](schemas/schema21.gif)
+
+I also connected the detected 3D position of the ping-pong ball to MoveIt.
+The planned movement updates when the ball moves in height or depth.
+The automatic replanning works correctly in RViz.
+
+![Ping-pong ball detection and MoveIt replanning](schemas/schema22.gif)
+
+**Next steps.**
+
+- Improve the general performance.
+- Reduce the detection and processing delay.
+- Test the complete movement on the physical robot.

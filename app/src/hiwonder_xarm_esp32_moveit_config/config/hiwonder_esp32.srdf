@@ -10,11 +10,7 @@
     <!--CHAINS: When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
     <!--SUBGROUPS: Groups can also be formed by referencing to already defined group names-->
     <group name="arm">
-        <joint name="limb5_to_limb4_joint"/>
-        <joint name="limb1_to_base_link_joint"/>
-        <joint name="limb2_to_limb1_joint"/>
-        <joint name="limb3_to_limb2_joint"/>
-        <joint name="limb4_to_limb3_joint"/>
+        <chain base_link="base_link" tip_link="gripper_tcp_link"/>
     </group>
     <group name="gripper">
         <joint name="gripper_left_joint"/>
@@ -28,17 +24,17 @@
         <joint name="limb5_to_limb4_joint" value="0"/>
     </group_state>
     <group_state name="default" group="arm">
-        <joint name="limb1_to_base_link_joint" value="0.015082"/>
-        <joint name="limb2_to_limb1_joint" value="1.550816"/>
-        <joint name="limb3_to_limb2_joint" value="1.550816"/>
-        <joint name="limb4_to_limb3_joint" value="-1.573432"/>
+        <joint name="limb1_to_base_link_joint" value="0.048592"/>
+        <joint name="limb2_to_limb1_joint" value="1.148692"/>
+        <joint name="limb3_to_limb2_joint" value="1.140315"/>
+        <joint name="limb4_to_limb3_joint" value="-1.759371"/>
         <joint name="limb5_to_limb4_joint" value="-0.008483"/>
     </group_state>
     <group_state name="open" group="gripper">
-        <joint name="gripper_left_joint" value="0.015"/>
+        <joint name="gripper_left_joint" value="0.013651"/>
     </group_state>
     <group_state name="closed" group="gripper">
-        <joint name="gripper_left_joint" value="-0.015"/>
+        <joint name="gripper_left_joint" value="-0.013651"/>
     </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <end_effector name="gripper" parent_link="limb5_link" group="gripper" parent_group="arm"/>

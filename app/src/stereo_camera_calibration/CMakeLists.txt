@@ -37,6 +37,18 @@ install(PROGRAMS
   RENAME yolo_detection_node
 )
 
+install(PROGRAMS
+  scripts/ball_goal_preview_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME ball_goal_preview_node
+)
+
+install(PROGRAMS
+  scripts/ball_plan_preview_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME ball_plan_preview_node
+)
+
 install(DIRECTORY
   launch
   rviz
