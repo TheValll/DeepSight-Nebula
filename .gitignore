@@ -43,3 +43,4 @@ benchmark_micro_python_firmware
 test_hiwonder
 test_hiwonder_xarm_rust_driver
 test_hiwonder_xarm_rust_driver_hardware
+/mobileclip2_b.ts

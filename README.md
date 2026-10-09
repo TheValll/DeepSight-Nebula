@@ -855,8 +855,19 @@ I adjusted the pickup point and raised the detected ball position by 1 cm.
 This adjustment worked in these tests and still needs checking in other positions.
 RViz no longer repeats the animation, and the old target disappears after the pick.
 
+Basic pick:
+
+![Basic physical ball pick](schemas/physical_ball_pick_basic.gif)
+
+Pick from my hand:
+
+![Physical ball pick from my hand](schemas/physical_ball_pick_hand.gif)
+
+Pick from the desk:
+
+![Physical ball pick from the desk](schemas/physical_ball_pick_desk.gif)
+
 **Next steps.**
 
-- Add the video of the physical pick.
 - Test more ball positions.
 - Improve performance and reduce processing delay.
