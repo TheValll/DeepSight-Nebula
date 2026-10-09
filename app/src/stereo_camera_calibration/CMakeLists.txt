@@ -8,10 +8,12 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
+find_package(Threads REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -23,7 +25,7 @@ add_executable(calibration_exe src/calibration_node.cpp)
 add_executable(rectification_exe src/rectification_node.cpp)
 
 ament_target_dependencies(calibration_exe rclcpp)
-ament_target_dependencies(rectification_exe cv_bridge rclcpp sensor_msgs)
+ament_target_dependencies(rectification_exe cv_bridge diagnostic_msgs rclcpp sensor_msgs)
 
 install(TARGETS
   calibration_exe
@@ -49,6 +51,18 @@ install(PROGRAMS
   RENAME ball_plan_preview_node
 )
 
+install(PROGRAMS
+  scripts/ball_pick_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME ball_pick_node
+)
+
+install(PROGRAMS
+  scripts/pipeline_benchmark_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME pipeline_benchmark_node
+)
+
 install(DIRECTORY
   launch
   rviz
@@ -61,9 +75,12 @@ target_link_libraries(calibration_exe
 
 target_link_libraries(rectification_exe
   ${OpenCV_LIBS}
+  Threads::Threads
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_ball_pick_return test/test_ball_pick_return.py)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files

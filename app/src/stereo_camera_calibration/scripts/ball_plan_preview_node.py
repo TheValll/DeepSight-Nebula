@@ -6,8 +6,10 @@ from collections import deque
 from copy import deepcopy
 from math import dist
 from statistics import median
+import time
 
 import rclpy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import Pose, PoseStamped, Vector3
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import (
@@ -34,9 +36,6 @@ class BallPlanPreviewNode(Node):
         self.tip_link = str(
             self.declare_parameter("tip_link", "gripper_tcp_link").value
         )
-        self.pregrasp_height = float(
-            self.declare_parameter("pregrasp_height", 0.05).value
-        )
         self.position_tolerance = float(
             self.declare_parameter("position_tolerance", 0.01).value
         )
@@ -54,6 +53,18 @@ class BallPlanPreviewNode(Node):
         self.min_replan_interval = float(
             self.declare_parameter("min_replan_interval", 1.5).value
         )
+        self.auto_plan_period = float(
+            self.declare_parameter("auto_plan_period", 0.2).value
+        )
+        self.planning_attempts = int(
+            self.declare_parameter("planning_attempts", 5).value
+        )
+        self.allowed_planning_time = float(
+            self.declare_parameter("allowed_planning_time", 5.0).value
+        )
+        self.publish_metrics = bool(
+            self.declare_parameter("publish_metrics", False).value
+        )
 
         # Optional correction from the selected tip. The normal configuration uses
         # gripper_tcp_link, whose measured 8 cm offset is already in the URDF.
@@ -67,8 +78,13 @@ class BallPlanPreviewNode(Node):
         self.latest_ball_received = None
         self.plan_in_progress = False
         self.ball_samples = deque(maxlen=max(1, self.stable_sample_count))
+        self.ball_sample_times = deque(maxlen=max(1, self.stable_sample_count))
         self.last_requested_target = None
         self.last_request_time = self.get_clock().now() - Duration(seconds=10.0)
+        self.pending_request_start = None
+        self.pending_target_header = None
+        self.pending_goal_to_request_ms = 0.0
+        self.pending_stable_window_ms = 0.0
 
         self.create_subscription(PoseStamped, "/ball_goal/pose", self.store_ball, 10)
         self.create_service(Trigger, "/plan_ball_goal", self.request_plan)
@@ -76,7 +92,10 @@ class BallPlanPreviewNode(Node):
         self.display_publisher = self.create_publisher(
             DisplayTrajectory, "/display_planned_path", 10
         )
-        self.create_timer(0.2, self.auto_plan_if_needed)
+        self.metrics_publisher = self.create_publisher(
+            DiagnosticArray, "/pipeline/metrics", 10
+        )
+        self.create_timer(max(0.01, self.auto_plan_period), self.auto_plan_if_needed)
 
         self.get_logger().info(
             "Plan-only ball preview ready"
@@ -95,7 +114,9 @@ class BallPlanPreviewNode(Node):
         )
         if self.ball_samples and dist(point, self.ball_samples[-1]) > 0.10:
             self.ball_samples.clear()
+            self.ball_sample_times.clear()
         self.ball_samples.append(point)
+        self.ball_sample_times.append(self.get_clock().now())
 
     def auto_plan_if_needed(self) -> None:
         if not self.auto_plan or self.plan_in_progress:
@@ -114,7 +135,7 @@ class BallPlanPreviewNode(Node):
 
         target = deepcopy(self.latest_ball)
         target.pose.position.x, target.pose.position.y, target.pose.position.z = centre
-        target = self.make_pregrasp_target(target)
+        target = self.make_ball_target(target)
         target_xyz = self.pose_xyz(target)
         if (
             self.last_requested_target is not None
@@ -127,7 +148,14 @@ class BallPlanPreviewNode(Node):
             return
         if not self.move_group.server_is_ready():
             return
-        self.start_plan(target, automatic=True)
+        stable_window_ms = 0.0
+        if self.ball_sample_times:
+            stable_window_ms = (
+                self.get_clock().now() - self.ball_sample_times[0]
+            ).nanoseconds / 1_000_000.0
+        self.start_plan(
+            target, automatic=True, stable_window_ms=stable_window_ms
+        )
 
     def request_plan(self, request: Trigger.Request, response: Trigger.Response):
         del request
@@ -149,20 +177,26 @@ class BallPlanPreviewNode(Node):
             response.message = "MoveIt /move_action n'est pas disponible."
             return response
 
-        target = self.make_pregrasp_target(self.latest_ball)
-        self.start_plan(target, automatic=False)
+        target = self.make_ball_target(self.latest_ball)
+        stable_window_ms = 0.0
+        if self.ball_sample_times:
+            stable_window_ms = (
+                self.get_clock().now() - self.ball_sample_times[0]
+            ).nanoseconds / 1_000_000.0
+        self.start_plan(
+            target, automatic=False, stable_window_ms=stable_window_ms
+        )
         response.success = True
         response.message = (
-            "Planification seule demandee pour le pre-grasp "
+            "Planification seule demandee pour la balle "
             f"x={target.pose.position.x:.3f}, y={target.pose.position.y:.3f}, "
             f"z={target.pose.position.z:.3f} m."
         )
         return response
 
-    def make_pregrasp_target(self, ball: PoseStamped) -> PoseStamped:
+    def make_ball_target(self, ball: PoseStamped) -> PoseStamped:
         target = deepcopy(ball)
         target.header.frame_id = self.base_frame
-        target.pose.position.z += self.pregrasp_height
         return target
 
     @staticmethod
@@ -173,14 +207,16 @@ class BallPlanPreviewNode(Node):
             target.pose.position.z,
         )
 
-    def start_plan(self, target: PoseStamped, automatic: bool) -> None:
+    def start_plan(
+        self, target: PoseStamped, automatic: bool, stable_window_ms: float
+    ) -> None:
         self.clear_display()
 
         goal = MoveGroup.Goal()
         goal.request.group_name = self.group_name
         goal.request.pipeline_id = "ompl"
-        goal.request.num_planning_attempts = 5
-        goal.request.allowed_planning_time = 5.0
+        goal.request.num_planning_attempts = max(1, self.planning_attempts)
+        goal.request.allowed_planning_time = max(0.1, self.allowed_planning_time)
         goal.request.max_velocity_scaling_factor = 0.2
         goal.request.max_acceleration_scaling_factor = 0.2
         goal.request.start_state.is_diff = True
@@ -197,6 +233,14 @@ class BallPlanPreviewNode(Node):
         self.plan_in_progress = True
         self.last_requested_target = self.pose_xyz(target)
         self.last_request_time = self.get_clock().now()
+        self.pending_request_start = time.perf_counter()
+        self.pending_target_header = deepcopy(target.header)
+        target_time = rclpy.time.Time.from_msg(target.header.stamp)
+        self.pending_goal_to_request_ms = max(
+            0.0,
+            (self.get_clock().now() - target_time).nanoseconds / 1_000_000.0,
+        )
+        self.pending_stable_window_ms = stable_window_ms
         future = self.move_group.send_goal_async(goal)
         future.add_done_callback(self.goal_response)
         mode = "automatique" if automatic else "manuelle"
@@ -228,7 +272,7 @@ class BallPlanPreviewNode(Node):
         position.weight = 1.0
 
         constraints = Constraints()
-        constraints.name = "ball_pregrasp"
+        constraints.name = "ball_goal"
         constraints.position_constraints = [position]
         return constraints
 
@@ -238,11 +282,13 @@ class BallPlanPreviewNode(Node):
         except Exception as error:  # noqa: BLE001 - ROS future transports exceptions
             self.plan_in_progress = False
             self.clear_display()
+            self.publish_plan_timing(False, -1.0, 0, 0.0)
             self.get_logger().error(f"Impossible d'envoyer le plan: {error}")
             return
         if not goal_handle.accepted:
             self.plan_in_progress = False
             self.clear_display()
+            self.publish_plan_timing(False, -1.0, 0, 0.0)
             self.get_logger().error("MoveIt a refuse la demande de planification.")
             return
         result_future = goal_handle.get_result_async()
@@ -254,11 +300,15 @@ class BallPlanPreviewNode(Node):
             result = future.result().result
         except Exception as error:  # noqa: BLE001 - ROS future transports exceptions
             self.clear_display()
+            self.publish_plan_timing(False, -1.0, 0, 0.0)
             self.get_logger().error(f"La planification a echoue: {error}")
             return
 
         if result.error_code.val != MoveItErrorCodes.SUCCESS:
             self.clear_display()
+            self.publish_plan_timing(
+                False, float(result.planning_time), 0, 0.0
+            )
             self.get_logger().error(
                 "Aucun plan valide vers la balle (code MoveIt "
                 f"{result.error_code.val}). Aucun mouvement n'a ete execute."
@@ -275,10 +325,48 @@ class BallPlanPreviewNode(Node):
         if points:
             last = points[-1].time_from_start
             duration = last.sec + last.nanosec * 1e-9
+        self.publish_plan_timing(
+            True, float(result.planning_time), len(points), duration
+        )
         self.get_logger().info(
             f"Plan trouve: {len(points)} points, {duration:.2f} s. "
             "Affichage RViz uniquement; aucun mouvement n'a ete execute."
         )
+
+    def publish_plan_timing(
+        self,
+        success: bool,
+        moveit_planning_seconds: float,
+        trajectory_points: int,
+        trajectory_duration_seconds: float,
+    ) -> None:
+        if not self.publish_metrics or self.pending_request_start is None:
+            return
+        total_ms = (time.perf_counter() - self.pending_request_start) * 1000.0
+        message = DiagnosticArray()
+        if self.pending_target_header is not None:
+            message.header = self.pending_target_header
+        status = DiagnosticStatus()
+        status.level = DiagnosticStatus.OK if success else DiagnosticStatus.ERROR
+        status.name = "planning"
+        status.message = "planning timings"
+        status.hardware_id = "moveit"
+        metrics = {
+            "success": 1.0 if success else 0.0,
+            "stable_window_ms": self.pending_stable_window_ms,
+            "goal_to_request_ms": self.pending_goal_to_request_ms,
+            "request_to_result_ms": total_ms,
+            "moveit_planning_ms": max(0.0, moveit_planning_seconds * 1000.0),
+            "trajectory_points": float(trajectory_points),
+            "trajectory_duration_ms": trajectory_duration_seconds * 1000.0,
+        }
+        status.values = [
+            KeyValue(key=name, value=f"{value:.6f}")
+            for name, value in metrics.items()
+        ]
+        message.status = [status]
+        self.metrics_publisher.publish(message)
+        self.pending_request_start = None
 
 
 def main() -> None:

@@ -1,0 +1,294 @@
+{
+  "label": "after_core_optimizations_2026-10-01",
+  "created_at": "2026-09-30T22:04:45.078005+00:00",
+  "warmup_seconds": 5.0,
+  "duration_seconds": 30.0,
+  "source_message_counts": {
+    "stereo": 450,
+    "yolo": 443,
+    "goal": 400,
+    "planning": 8
+  },
+  "metrics": [
+    {
+      "source": "goal",
+      "metric": "capture_to_goal_ms",
+      "count": 400,
+      "mean": 58.782249355000005,
+      "median": 59.201343,
+      "p95": 65.9640701,
+      "min": 32.605098,
+      "max": 76.646936
+    },
+    {
+      "source": "goal",
+      "metric": "filter_sample_count",
+      "count": 400,
+      "mean": 4.975,
+      "median": 5.0,
+      "p95": 5.0,
+      "min": 1.0,
+      "max": 5.0
+    },
+    {
+      "source": "goal",
+      "metric": "filter_window_ms",
+      "count": 400,
+      "mean": 294.3075264175,
+      "median": 269.294093,
+      "p95": 469.04049879999974,
+      "min": 0.597217,
+      "max": 608.942839
+    },
+    {
+      "source": "goal",
+      "metric": "tf_filter_publish_ms",
+      "count": 400,
+      "mean": 0.71722836,
+      "median": 0.7063820000000001,
+      "p95": 0.8733694499999998,
+      "min": 0.542658,
+      "max": 1.014735
+    },
+    {
+      "source": "planning",
+      "metric": "goal_to_request_ms",
+      "count": 8,
+      "mean": 32.8392585,
+      "median": 30.793427,
+      "p95": 44.7614717,
+      "min": 23.481267,
+      "max": 45.614561
+    },
+    {
+      "source": "planning",
+      "metric": "moveit_planning_ms",
+      "count": 8,
+      "mean": 17.836189875,
+      "median": 15.6478225,
+      "p95": 23.341557,
+      "min": 12.793094,
+      "max": 23.353548
+    },
+    {
+      "source": "planning",
+      "metric": "request_to_result_ms",
+      "count": 8,
+      "mean": 36.282674875,
+      "median": 36.389322,
+      "p95": 41.04931975,
+      "min": 31.022625,
+      "max": 41.4436
+    },
+    {
+      "source": "planning",
+      "metric": "stable_window_ms",
+      "count": 8,
+      "mean": 280.809267625,
+      "median": 237.046233,
+      "p95": 445.88016394999994,
+      "min": 217.778047,
+      "max": 490.837959
+    },
+    {
+      "source": "planning",
+      "metric": "success",
+      "count": 8,
+      "mean": 1.0,
+      "median": 1.0,
+      "p95": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    {
+      "source": "planning",
+      "metric": "trajectory_duration_ms",
+      "count": 8,
+      "mean": 2980.361691875,
+      "median": 2925.289062,
+      "p95": 3432.61882785,
+      "min": 2613.324611,
+      "max": 3491.264054
+    },
+    {
+      "source": "planning",
+      "metric": "trajectory_points",
+      "count": 8,
+      "mean": 31.375,
+      "median": 31.0,
+      "p95": 35.65,
+      "min": 28.0,
+      "max": 36.0
+    },
+    {
+      "source": "stereo",
+      "metric": "camera_wait_ms",
+      "count": 450,
+      "mean": 66.67330908888889,
+      "median": 67.7172405,
+      "p95": 68.66205705,
+      "min": 62.467059,
+      "max": 69.393008
+    },
+    {
+      "source": "stereo",
+      "metric": "depth_ms",
+      "count": 450,
+      "mean": 13.506677571111112,
+      "median": 12.69718,
+      "p95": 17.58187945,
+      "min": 11.281641,
+      "max": 20.197812
+    },
+    {
+      "source": "stereo",
+      "metric": "frame_period_ms",
+      "count": 450,
+      "mean": 66.67879706666666,
+      "median": 67.7226105,
+      "p95": 68.66742205,
+      "min": 62.472089,
+      "max": 69.398958
+    },
+    {
+      "source": "stereo",
+      "metric": "image_publish_ms",
+      "count": 450,
+      "mean": 1.0506705955555555,
+      "median": 1.048825,
+      "p95": 1.2772685499999998,
+      "min": 0.714237,
+      "max": 1.500463
+    },
+    {
+      "source": "stereo",
+      "metric": "rectification_ms",
+      "count": 450,
+      "mean": 2.0853014511111114,
+      "median": 2.0862610000000004,
+      "p95": 2.367107,
+      "min": 1.560654,
+      "max": 3.837494
+    },
+    {
+      "source": "stereo",
+      "metric": "total_processing_ms",
+      "count": 450,
+      "mean": 16.643145635555555,
+      "median": 15.821666,
+      "p95": 20.88812255,
+      "min": 14.027379,
+      "max": 24.464873
+    },
+    {
+      "source": "stereo",
+      "metric": "visualization_ms",
+      "count": 450,
+      "mean": 0.0004960177777777778,
+      "median": 0.00044,
+      "p95": 0.0009354999999999996,
+      "min": 0.0001,
+      "max": 0.00142
+    },
+    {
+      "source": "yolo",
+      "metric": "annotate_and_3d_ms",
+      "count": 443,
+      "mean": 0.36435285101580134,
+      "median": 0.364858,
+      "p95": 0.4753790999999999,
+      "min": 0.06137,
+      "max": 4.44631
+    },
+    {
+      "source": "yolo",
+      "metric": "capture_to_detection_ms",
+      "count": 443,
+      "mean": 57.48832471783296,
+      "median": 58.040708,
+      "p95": 64.64119219999999,
+      "min": 31.553832,
+      "max": 75.61658
+    },
+    {
+      "source": "yolo",
+      "metric": "conversion_ms",
+      "count": 443,
+      "mean": 0.342915683972912,
+      "median": 0.346419,
+      "p95": 0.45344799999999996,
+      "min": 0.180409,
+      "max": 0.509238
+    },
+    {
+      "source": "yolo",
+      "metric": "detection_count",
+      "count": 443,
+      "mean": 0.9119638826185101,
+      "median": 1.0,
+      "p95": 1.0,
+      "min": 0.0,
+      "max": 2.0
+    },
+    {
+      "source": "yolo",
+      "metric": "inference_wall_ms",
+      "count": 443,
+      "mean": 39.40419857562077,
+      "median": 40.374254,
+      "p95": 45.813744,
+      "min": 15.484833,
+      "max": 52.214382
+    },
+    {
+      "source": "yolo",
+      "metric": "queue_age_ms",
+      "count": 443,
+      "mean": 17.361706887133185,
+      "median": 16.555469,
+      "p95": 21.547365999999997,
+      "min": 14.687376,
+      "max": 25.35994
+    },
+    {
+      "source": "yolo",
+      "metric": "total_callback_ms",
+      "count": 443,
+      "mean": 40.11238542663657,
+      "median": 41.055041,
+      "p95": 46.603253099999996,
+      "min": 16.132259,
+      "max": 53.180948
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_inference_ms",
+      "count": 443,
+      "mean": 27.276378216704288,
+      "median": 26.520735,
+      "p95": 36.1973198,
+      "min": 11.227741,
+      "max": 38.81022
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_postprocess_ms",
+      "count": 443,
+      "mean": 6.690410873589165,
+      "median": 8.690652,
+      "p95": 12.325686099999995,
+      "min": 0.220889,
+      "max": 14.474477
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_preprocess_ms",
+      "count": 443,
+      "mean": 5.205228135440181,
+      "median": 4.984479,
+      "p95": 9.521652999999999,
+      "min": 1.640123,
+      "max": 12.732925
+    }
+  ]
+}

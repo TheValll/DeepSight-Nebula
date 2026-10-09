@@ -132,6 +132,8 @@
         <param name="raw_min">270</param>
         <param name="raw_max">786</param>
         <param name="movement_duration_ms">1000</param>
+        <!-- Slow closure only; opening and arm movements keep their durations. -->
+        <param name="closing_movement_duration_ms">3000</param>
         <param name="hardware_io_enabled">${gripper_hardware_io_enabled}</param>
         <command_interface name="position">
           <param name="min">-0.013921</param>

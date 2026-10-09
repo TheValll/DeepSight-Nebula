@@ -841,3 +841,22 @@ The automatic replanning works correctly in RViz.
 - Improve the general performance.
 - Reduce the detection and processing delay.
 - Test the complete movement on the physical robot.
+
+### 2026-10-01 — First physical ball picks
+
+Today, I tested the complete pipeline on the physical robot.
+The robot detects the ping-pong ball, opens the gripper, reaches it and closes slowly.
+After the pick, the arm returns automatically to `default`, keeping the ball in the gripper.
+
+Five picks worked, including a more difficult position and a ball resting on the desk.
+These are first tests, not a full reliability benchmark.
+
+I adjusted the pickup point and raised the detected ball position by 1 cm.
+This adjustment worked in these tests and still needs checking in other positions.
+RViz no longer repeats the animation, and the old target disappears after the pick.
+
+**Next steps.**
+
+- Add the video of the physical pick.
+- Test more ball positions.
+- Improve performance and reduce processing delay.

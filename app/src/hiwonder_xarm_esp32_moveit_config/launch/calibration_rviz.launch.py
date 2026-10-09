@@ -20,6 +20,7 @@ from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -65,15 +66,18 @@ def generate_launch_description():
         [description_package, 'rviz', 'urdf_config.rviz']
     )
     robot_description = {
-        'robot_description': Command(
-            [
-                FindExecutable(name='xacro'), ' ', urdf,
-                ' initial_positions_file:=', initial_positions,
-                ' use_mock_hardware:=false',
-                ' serial_port:=', serial_port,
-                ' gripper_hardware_io_enabled:=true',
-                ' read_only:=true',
-            ]
+        'robot_description': ParameterValue(
+            Command(
+                [
+                    FindExecutable(name='xacro'), ' ', urdf,
+                    ' initial_positions_file:=', initial_positions,
+                    ' use_mock_hardware:=false',
+                    ' serial_port:=', serial_port,
+                    ' gripper_hardware_io_enabled:=true',
+                    ' read_only:=true',
+                ]
+            ),
+            value_type=str,
         )
     }
 

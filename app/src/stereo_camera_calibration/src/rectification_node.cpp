@@ -1,5 +1,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "cv_bridge/cv_bridge.hpp"
+#include "diagnostic_msgs/msg/diagnostic_array.hpp"
+#include "diagnostic_msgs/msg/diagnostic_status.hpp"
+#include "diagnostic_msgs/msg/key_value.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -12,13 +15,18 @@
 #include <opencv2/videoio.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
+#include <cstdint>
 #include <memory>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 class RectificationNode : public rclcpp::Node
@@ -31,6 +39,16 @@ public:
       declare_parameter<std::string>("calibration_file", "calibration/stereo_calib.xml");
     const auto camera_index = declare_parameter<int>("camera_index", 0);
     show_debug_windows_ = declare_parameter<bool>("show_debug_windows", true);
+    publish_depth_color_ = declare_parameter<bool>("publish_depth_color", true);
+    publish_point_cloud_ = declare_parameter<bool>("publish_point_cloud", true);
+    publish_metrics_ = declare_parameter<bool>("publish_metrics", false);
+    num_disparities_ = declare_parameter<int>("num_disparities", 96);
+    min_depth_meters_ = static_cast<float>(
+      declare_parameter<double>("minimum_depth", 0.15));
+
+    if (num_disparities_ <= 0 || num_disparities_ % 16 != 0) {
+      throw std::runtime_error("num_disparities must be positive and divisible by 16");
+    }
 
     left_image_publisher_ = create_publisher<sensor_msgs::msg::Image>(
       "/stereo/left/image_rect", rclcpp::SensorDataQoS());
@@ -42,6 +60,8 @@ public:
       "/stereo/depth/camera_info", rclcpp::SensorDataQoS());
     point_cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>(
       "/stereo/points", rclcpp::SensorDataQoS());
+    metrics_publisher_ = create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+      "/pipeline/metrics", rclcpp::SensorDataQoS());
 
     load_calibration(calibration_file);
     run(camera_index);
@@ -53,9 +73,7 @@ private:
   static constexpr int kFramesPerSecond = 30;
   static constexpr double kDepthScale = 0.5;
   static constexpr int kMinDisparity = 0;
-  static constexpr int kNumDisparities = 96;
   static constexpr int kBlockSize = 5;
-  static constexpr float kMinDepthMeters = 0.15F;
   static constexpr float kMaxDepthMeters = 2.0F;
 
   cv::Mat k1_;
@@ -65,11 +83,45 @@ private:
   cv::Mat rotation_;
   cv::Mat translation_;
   bool show_debug_windows_ = true;
+  bool publish_depth_color_ = true;
+  bool publish_point_cloud_ = true;
+  bool publish_metrics_ = false;
+  int num_disparities_ = 96;
+  float min_depth_meters_ = 0.15F;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_color_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr depth_camera_info_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_publisher_;
+  rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr metrics_publisher_;
+
+  static diagnostic_msgs::msg::KeyValue metric(
+    const std::string & name, const double value)
+  {
+    diagnostic_msgs::msg::KeyValue result;
+    result.key = name;
+    result.value = std::to_string(value);
+    return result;
+  }
+
+  void publish_metrics(
+    const std_msgs::msg::Header & header,
+    const std::vector<diagnostic_msgs::msg::KeyValue> & values)
+  {
+    if (!publish_metrics_) {
+      return;
+    }
+    diagnostic_msgs::msg::DiagnosticArray message;
+    message.header = header;
+    diagnostic_msgs::msg::DiagnosticStatus status;
+    status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    status.name = "stereo";
+    status.message = "frame timings";
+    status.hardware_id = "stereo_camera";
+    status.values = values;
+    message.status.push_back(status);
+    metrics_publisher_->publish(message);
+  }
 
   void load_calibration(const std::string & path)
   {
@@ -102,7 +154,9 @@ private:
     camera.set(cv::CAP_PROP_FRAME_WIDTH, kStereoWidth);
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, kStereoHeight);
     camera.set(cv::CAP_PROP_FPS, kFramesPerSecond);
-    camera.set(cv::CAP_PROP_BUFFERSIZE, 1);
+    // V4L2 needs at least two buffers to capture at the requested frame rate.
+    // A single buffer halves this camera from 30 FPS to about 15 FPS.
+    camera.set(cv::CAP_PROP_BUFFERSIZE, 2);
 
     if (!camera.isOpened()) {
       throw std::runtime_error("Unable to open stereo camera");
@@ -174,7 +228,7 @@ private:
       depth_right_map_y);
 
     auto stereo_matcher = cv::StereoSGBM::create(
-      kMinDisparity, kNumDisparities, kBlockSize,
+      kMinDisparity, num_disparities_, kBlockSize,
       8 * kBlockSize * kBlockSize,
       32 * kBlockSize * kBlockSize,
       1, 63, 10, 100, 2, cv::StereoSGBM::MODE_SGBM_3WAY);
@@ -189,12 +243,67 @@ private:
       RCLCPP_INFO(get_logger(), "Press 'q' or Escape to stop");
     }
 
+    cv::Mat latest_frame;
+    builtin_interfaces::msg::Time latest_stamp;
+    double latest_camera_wait_ms = 0.0;
+    double latest_frame_period_ms = -1.0;
+    std::uint64_t latest_sequence = 0;
+    std::mutex capture_mutex;
+    std::condition_variable capture_ready;
+    std::atomic_bool stop_capture{false};
+
+    std::thread capture_thread(
+      [&]() {
+        auto previous_capture = std::chrono::steady_clock::time_point{};
+        while (rclcpp::ok() && !stop_capture.load()) {
+          const auto capture_start = std::chrono::steady_clock::now();
+          cv::Mat captured_frame;
+          if (!camera.read(captured_frame) || captured_frame.empty()) {
+            RCLCPP_WARN(get_logger(), "Unable to capture a stereo frame");
+            continue;
+          }
+          const auto capture_end = std::chrono::steady_clock::now();
+          const double camera_wait_ms = std::chrono::duration<double, std::milli>(
+            capture_end - capture_start).count();
+          double frame_period_ms = -1.0;
+          if (previous_capture != std::chrono::steady_clock::time_point{}) {
+            frame_period_ms = std::chrono::duration<double, std::milli>(
+              capture_end - previous_capture).count();
+          }
+          previous_capture = capture_end;
+
+          {
+            std::lock_guard<std::mutex> lock(capture_mutex);
+            latest_frame = std::move(captured_frame);
+            latest_stamp = now();
+            latest_camera_wait_ms = camera_wait_ms;
+            latest_frame_period_ms = frame_period_ms;
+            ++latest_sequence;
+          }
+          capture_ready.notify_one();
+        }
+        capture_ready.notify_one();
+      });
+
     cv::Mat stereo_frame;
     std::size_t frame_number = 0;
+    std::uint64_t consumed_sequence = 0;
     while (rclcpp::ok()) {
-      if (!camera.read(stereo_frame) || stereo_frame.empty()) {
-        RCLCPP_WARN(get_logger(), "Unable to capture a stereo frame");
-        continue;
+      builtin_interfaces::msg::Time capture_stamp;
+      double camera_wait_ms = 0.0;
+      double frame_period_ms = -1.0;
+      {
+        std::unique_lock<std::mutex> lock(capture_mutex);
+        capture_ready.wait(
+          lock, [&]() {return !rclcpp::ok() || latest_sequence != consumed_sequence;});
+        if (!rclcpp::ok()) {
+          break;
+        }
+        stereo_frame = latest_frame;
+        capture_stamp = latest_stamp;
+        camera_wait_ms = latest_camera_wait_ms;
+        frame_period_ms = latest_frame_period_ms;
+        consumed_sequence = latest_sequence;
       }
 
       if (stereo_frame.size() != cv::Size(kStereoWidth, kStereoHeight)) {
@@ -222,6 +331,7 @@ private:
       cv::remap(
         right, right_depth_rectified, depth_right_map_x, depth_right_map_y,
         cv::INTER_LINEAR);
+      const auto rectification_end = std::chrono::steady_clock::now();
 
       cv::Mat left_gray;
       cv::Mat right_gray;
@@ -235,22 +345,25 @@ private:
       disparity_fixed.convertTo(disparity, CV_32F, 1.0 / 16.0);
       const cv::Mat valid_disparity = disparity > kMinDisparity;
 
-      cv::Mat disparity_gray;
-      disparity.convertTo(disparity_gray, CV_8U, 255.0 / kNumDisparities);
-      disparity_gray.setTo(0, ~valid_disparity);
       cv::Mat disparity_color;
-      cv::applyColorMap(disparity_gray, disparity_color, cv::COLORMAP_TURBO);
-      disparity_color.setTo(cv::Scalar::all(0), ~valid_disparity);
+      if (show_debug_windows_) {
+        cv::Mat disparity_gray;
+        disparity.convertTo(disparity_gray, CV_8U, 255.0 / num_disparities_);
+        disparity_gray.setTo(0, ~valid_disparity);
+        cv::applyColorMap(disparity_gray, disparity_color, cv::COLORMAP_TURBO);
+        disparity_color.setTo(cv::Scalar::all(0), ~valid_disparity);
+      }
 
       cv::Mat points_3d;
       cv::reprojectImageTo3D(disparity, points_3d, depth_q, true);
       cv::Mat depth;
       cv::extractChannel(points_3d, depth, 2);
       const cv::Mat valid_depth =
-        valid_disparity & (depth >= kMinDepthMeters) & (depth <= kMaxDepthMeters);
+        valid_disparity & (depth >= min_depth_meters_) & (depth <= kMaxDepthMeters);
+      const auto depth_end = std::chrono::steady_clock::now();
 
       std_msgs::msg::Header image_header;
-      image_header.stamp = now();
+      image_header.stamp = capture_stamp;
       image_header.frame_id = "camera_left_optical_frame";
       left_image_publisher_->publish(
         *cv_bridge::CvImage(
@@ -276,8 +389,14 @@ private:
         }
       }
       depth_camera_info_publisher_->publish(depth_camera_info);
+      const auto image_publish_end = std::chrono::steady_clock::now();
 
-      if (frame_number % 3 == 0) {
+      double point_cloud_ms = -1.0;
+      if (
+        publish_point_cloud_ && point_cloud_publisher_->get_subscription_count() > 0 &&
+        frame_number % 3 == 0)
+      {
+        const auto point_cloud_start = std::chrono::steady_clock::now();
         sensor_msgs::msg::PointCloud2 cloud;
         cloud.header = image_header;
         cloud.height = depth_size.height;
@@ -315,64 +434,104 @@ private:
           }
         }
         point_cloud_publisher_->publish(cloud);
+        point_cloud_ms = std::chrono::duration<double, std::milli>(
+          std::chrono::steady_clock::now() - point_cloud_start).count();
       }
       ++frame_number;
 
-      cv::Mat depth_clamped;
-      cv::min(depth, kMaxDepthMeters, depth_clamped);
-      cv::max(depth_clamped, kMinDepthMeters, depth_clamped);
-      cv::Mat depth_gray;
-      depth_clamped.convertTo(
-        depth_gray, CV_8U,
-        -255.0 / (kMaxDepthMeters - kMinDepthMeters),
-        255.0 * kMaxDepthMeters / (kMaxDepthMeters - kMinDepthMeters));
-      depth_gray.setTo(0, ~valid_depth);
       cv::Mat depth_color;
-      cv::applyColorMap(depth_gray, depth_color, cv::COLORMAP_TURBO);
-      depth_color.setTo(cv::Scalar::all(0), ~valid_depth);
-      depth_color_publisher_->publish(
-        *cv_bridge::CvImage(
-          image_header, sensor_msgs::image_encodings::BGR8, depth_color).toImageMsg());
+      const bool needs_depth_color = show_debug_windows_ ||
+        (publish_depth_color_ && depth_color_publisher_->get_subscription_count() > 0);
+      if (needs_depth_color) {
+        cv::Mat depth_clamped;
+        cv::min(depth, kMaxDepthMeters, depth_clamped);
+        cv::max(depth_clamped, min_depth_meters_, depth_clamped);
+        cv::Mat depth_gray;
+        depth_clamped.convertTo(
+          depth_gray, CV_8U,
+          -255.0 / (kMaxDepthMeters - min_depth_meters_),
+          255.0 * kMaxDepthMeters / (kMaxDepthMeters - min_depth_meters_));
+        depth_gray.setTo(0, ~valid_depth);
+        cv::applyColorMap(depth_gray, depth_color, cv::COLORMAP_TURBO);
+        depth_color.setTo(cv::Scalar::all(0), ~valid_depth);
 
-      const cv::Point center(depth_size.width / 2, depth_size.height / 2);
-      cv::drawMarker(depth_color, center, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, 24, 2);
-      const cv::Rect center_region(center.x - 10, center.y - 10, 21, 21);
-      std::vector<float> center_depths;
-      center_depths.reserve(center_region.area());
-      for (int y = center_region.y; y < center_region.y + center_region.height; ++y) {
-        for (int x = center_region.x; x < center_region.x + center_region.width; ++x) {
-          const float value = depth.at<float>(y, x);
-          if (value >= kMinDepthMeters && value <= kMaxDepthMeters) {
-            center_depths.push_back(value);
+        const cv::Point center(depth_size.width / 2, depth_size.height / 2);
+        cv::drawMarker(
+          depth_color, center, cv::Scalar(255, 255, 255), cv::MARKER_CROSS, 24, 2);
+        const cv::Rect center_region(center.x - 10, center.y - 10, 21, 21);
+        std::vector<float> center_depths;
+        center_depths.reserve(center_region.area());
+        for (int y = center_region.y; y < center_region.y + center_region.height; ++y) {
+          for (int x = center_region.x; x < center_region.x + center_region.width; ++x) {
+            const float value = depth.at<float>(y, x);
+            if (value >= min_depth_meters_ && value <= kMaxDepthMeters) {
+              center_depths.push_back(value);
+            }
           }
         }
-      }
-      if (!center_depths.empty()) {
-        const auto middle = center_depths.begin() + center_depths.size() / 2;
-        std::nth_element(center_depths.begin(), middle, center_depths.end());
-        char label[32];
-        std::snprintf(label, sizeof(label), "Center: %.3f m", *middle);
-        cv::putText(
-          depth_color, label, cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-          cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
+        if (!center_depths.empty()) {
+          const auto middle = center_depths.begin() + center_depths.size() / 2;
+          std::nth_element(center_depths.begin(), middle, center_depths.end());
+          char label[32];
+          std::snprintf(label, sizeof(label), "Center: %.3f m", *middle);
+          cv::putText(
+            depth_color, label, cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+            cv::Scalar(255, 255, 255), 2, cv::LINE_AA);
+        }
+
+        if (publish_depth_color_ && depth_color_publisher_->get_subscription_count() > 0) {
+          depth_color_publisher_->publish(
+            *cv_bridge::CvImage(
+              image_header, sensor_msgs::image_encodings::BGR8, depth_color).toImageMsg());
+        }
       }
 
       cv::Mat display;
-      cv::hconcat(left_rectified, right_rectified, display);
-      for (int y = 40; y < display.rows; y += 40) {
-        cv::line(display, cv::Point(0, y), cv::Point(display.cols - 1, y), cv::Scalar(0, 255, 0), 1);
+      if (show_debug_windows_) {
+        cv::hconcat(left_rectified, right_rectified, display);
+        for (int y = 40; y < display.rows; y += 40) {
+          cv::line(
+            display, cv::Point(0, y), cv::Point(display.cols - 1, y),
+            cv::Scalar(0, 255, 0), 1);
+        }
       }
 
       const auto processing_end = std::chrono::steady_clock::now();
       const double processing_ms = std::chrono::duration<double, std::milli>(
         processing_end - processing_start).count();
-      char performance_label[64];
-      std::snprintf(
-        performance_label, sizeof(performance_label), "Processing: %.1f ms (%.1f FPS)",
-        processing_ms, 1000.0 / processing_ms);
-      cv::putText(
-        display, performance_label, cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.0,
-        cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+      if (show_debug_windows_) {
+        char performance_label[64];
+        std::snprintf(
+          performance_label, sizeof(performance_label), "Processing: %.1f ms (%.1f FPS)",
+          processing_ms, 1000.0 / processing_ms);
+        cv::putText(
+          display, performance_label, cv::Point(20, 40), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+          cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+      }
+
+      std::vector<diagnostic_msgs::msg::KeyValue> metrics{
+        metric("camera_wait_ms", camera_wait_ms),
+        metric(
+          "rectification_ms", std::chrono::duration<double, std::milli>(
+            rectification_end - processing_start).count()),
+        metric(
+          "depth_ms", std::chrono::duration<double, std::milli>(
+            depth_end - rectification_end).count()),
+        metric(
+          "image_publish_ms", std::chrono::duration<double, std::milli>(
+            image_publish_end - depth_end).count()),
+        metric(
+          "visualization_ms", std::chrono::duration<double, std::milli>(
+            processing_end - image_publish_end).count()),
+        metric("total_processing_ms", processing_ms),
+      };
+      if (point_cloud_ms >= 0.0) {
+        metrics.push_back(metric("point_cloud_ms", point_cloud_ms));
+      }
+      if (frame_period_ms >= 0.0) {
+        metrics.push_back(metric("frame_period_ms", frame_period_ms));
+      }
+      publish_metrics(image_header, metrics);
 
       if (show_debug_windows_) {
         cv::imshow("Stereo rectification", display);
@@ -385,6 +544,11 @@ private:
       }
     }
 
+    stop_capture.store(true);
+    capture_ready.notify_one();
+    if (capture_thread.joinable()) {
+      capture_thread.join();
+    }
     camera.release();
     if (show_debug_windows_) {
       cv::destroyAllWindows();

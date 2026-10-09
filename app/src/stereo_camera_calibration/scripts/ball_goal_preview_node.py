@@ -2,11 +2,14 @@
 
 from collections import deque
 from copy import deepcopy
+import time
 
 import numpy as np
 import rclpy
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from geometry_msgs.msg import PointStamped, PoseStamped, TransformStamped
 from rclpy.duration import Duration
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from tf2_geometry_msgs import do_transform_point
@@ -21,14 +24,24 @@ class BallGoalPreviewNode(Node):
         super().__init__("ball_goal_preview_node")
 
         self.target_frame = str(self.declare_parameter("target_frame", "base_link").value)
-        self.pregrasp_height = float(
-            self.declare_parameter("pregrasp_height", 0.05).value
+        # Optional empirical base-frame offset; disabled until calibrated.
+        # This is not a general sphere/depth fit.
+        self.center_offset_z = float(
+            self.declare_parameter("center_offset_z", 0.0).value
         )
+        if not np.isfinite(self.center_offset_z):
+            raise ValueError("center_offset_z must be finite")
+        if self.center_offset_z != 0.0 and self.target_frame != "base_link":
+            raise ValueError("Nonzero center_offset_z requires target_frame=base_link")
         self.allow_latest_transform = bool(
             self.declare_parameter("allow_latest_transform", False).value
         )
+        self.publish_metrics = bool(
+            self.declare_parameter("publish_metrics", False).value
+        )
         sample_count = int(self.declare_parameter("sample_count", 10).value)
         self.positions = deque(maxlen=max(1, sample_count))
+        self.position_times = deque(maxlen=max(1, sample_count))
         self.last_log_time = self.get_clock().now() - Duration(seconds=10.0)
 
         sensor_qos = QoSProfile(
@@ -44,6 +57,9 @@ class BallGoalPreviewNode(Node):
         self.marker_publisher = self.create_publisher(
             MarkerArray, "/ball_goal/markers", 10
         )
+        self.metrics_publisher = self.create_publisher(
+            DiagnosticArray, "/pipeline/metrics", sensor_qos
+        )
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -55,6 +71,7 @@ class BallGoalPreviewNode(Node):
         )
 
     def process_markers(self, message: MarkerArray) -> None:
+        callback_start = time.perf_counter()
         balls = [
             marker
             for marker in message.markers
@@ -96,9 +113,12 @@ class BallGoalPreviewNode(Node):
             [transformed.point.x, transformed.point.y, transformed.point.z],
             dtype=float,
         )
+        position[2] += self.center_offset_z
         if self.positions and np.linalg.norm(position - self.positions[-1]) > 0.10:
             self.positions.clear()
+            self.position_times.clear()
         self.positions.append(position)
+        self.position_times.append(self.get_clock().now())
         filtered = np.median(np.stack(self.positions), axis=0)
 
         stamp = self.get_clock().now().to_msg()
@@ -114,6 +134,27 @@ class BallGoalPreviewNode(Node):
         self.publish_goal_transform(goal)
         self.publish_preview_markers(goal)
 
+        if self.publish_metrics:
+            source_time = rclpy.time.Time.from_msg(ball.header.stamp)
+            now = self.get_clock().now()
+            filter_window_ms = 0.0
+            if self.position_times:
+                filter_window_ms = (
+                    now - self.position_times[0]
+                ).nanoseconds / 1_000_000.0
+            self.publish_timing(
+                ball.header,
+                {
+                    "tf_filter_publish_ms": (time.perf_counter() - callback_start)
+                    * 1000.0,
+                    "filter_window_ms": filter_window_ms,
+                    "capture_to_goal_ms": max(
+                        0.0, (now - source_time).nanoseconds / 1_000_000.0
+                    ),
+                    "filter_sample_count": float(len(self.positions)),
+                },
+            )
+
         now = self.get_clock().now()
         if now - self.last_log_time >= Duration(seconds=2.0):
             self.get_logger().info(
@@ -122,6 +163,21 @@ class BallGoalPreviewNode(Node):
                 f"z={filtered[2]:.3f} m"
             )
             self.last_log_time = now
+
+    def publish_timing(self, header, metrics: dict[str, float]) -> None:
+        message = DiagnosticArray()
+        message.header = header
+        status = DiagnosticStatus()
+        status.level = DiagnosticStatus.OK
+        status.name = "goal"
+        status.message = "goal timings"
+        status.hardware_id = "tf"
+        status.values = [
+            KeyValue(key=name, value=f"{value:.6f}")
+            for name, value in metrics.items()
+        ]
+        message.status = [status]
+        self.metrics_publisher.publish(message)
 
     def publish_goal_transform(self, goal: PoseStamped) -> None:
         transform = TransformStamped()
@@ -144,9 +200,9 @@ class BallGoalPreviewNode(Node):
         target.type = Marker.SPHERE
         target.action = Marker.ADD
         target.pose = deepcopy(goal.pose)
-        target.scale.x = 0.045
-        target.scale.y = 0.045
-        target.scale.z = 0.045
+        target.scale.x = 0.04
+        target.scale.y = 0.04
+        target.scale.z = 0.04
         target.color.r = 1.0
         target.color.g = 0.1
         target.color.b = 0.1
@@ -154,51 +210,13 @@ class BallGoalPreviewNode(Node):
         target.lifetime = lifetime
         markers.markers.append(target)
 
-        pregrasp = Marker()
-        pregrasp.header = goal.header
-        pregrasp.ns = "ball_goal"
-        pregrasp.id = 1
-        pregrasp.type = Marker.SPHERE
-        pregrasp.action = Marker.ADD
-        pregrasp.pose = deepcopy(goal.pose)
-        pregrasp.pose.position.z += self.pregrasp_height
-        pregrasp.scale.x = 0.025
-        pregrasp.scale.y = 0.025
-        pregrasp.scale.z = 0.025
-        pregrasp.color.r = 0.1
-        pregrasp.color.g = 0.4
-        pregrasp.color.b = 1.0
-        pregrasp.color.a = 0.9
-        pregrasp.lifetime = lifetime
-        markers.markers.append(pregrasp)
-
-        approach = Marker()
-        approach.header = goal.header
-        approach.ns = "ball_goal"
-        approach.id = 2
-        approach.type = Marker.ARROW
-        approach.action = Marker.ADD
-        approach.points = [
-            deepcopy(pregrasp.pose.position),
-            deepcopy(target.pose.position),
-        ]
-        approach.scale.x = 0.008
-        approach.scale.y = 0.016
-        approach.scale.z = 0.02
-        approach.color.r = 0.2
-        approach.color.g = 0.6
-        approach.color.b = 1.0
-        approach.color.a = 0.9
-        approach.lifetime = lifetime
-        markers.markers.append(approach)
-
         label = Marker()
         label.header = goal.header
         label.ns = "ball_goal"
-        label.id = 3
+        label.id = 1
         label.type = Marker.TEXT_VIEW_FACING
         label.action = Marker.ADD
-        label.pose = deepcopy(pregrasp.pose)
+        label.pose = deepcopy(target.pose)
         label.pose.position.z += 0.025
         label.scale.z = 0.025
         label.color.r = 1.0
@@ -218,11 +236,15 @@ class BallGoalPreviewNode(Node):
 def main() -> None:
     rclpy.init()
     node = BallGoalPreviewNode()
+    # TF must keep arriving while a marker callback waits for its image timestamp.
+    executor = MultiThreadedExecutor(num_threads=2)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

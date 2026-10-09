@@ -118,7 +118,7 @@ void camera_stereo_calibration(){
         return;
     }
 
-    double rms = stereoCalibrate(objpoints, imgpointsL, imgpointsR, K1, D1, K2, D2, frameL.size(), R, T, E, F, CALIB_RATIONAL_MODEL, TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
+    double rms = stereoCalibrate(objpoints, imgpointsL, imgpointsR, K1, D1, K2, D2, frameL.size(), R, T, E, F, 0, TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, 1e-5));
 
     cout << "Calibration finished : RMS Error: " << rms << endl;
     cout << "Matrix (K1):\n" << K1 << endl;
@@ -130,6 +130,7 @@ void camera_stereo_calibration(){
     fs << "K1" << K1 << "D1" << D1;
     fs << "K2" << K2 << "D2" << D2;
     fs << "R" << R << "T" << T;
+    fs << "RMS" << rms;
     fs.release();
 
     cout << "Settings saved in 'calibration/stereo_calib.xml'" << endl;

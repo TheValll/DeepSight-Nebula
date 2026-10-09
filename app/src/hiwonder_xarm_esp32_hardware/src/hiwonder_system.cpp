@@ -103,6 +103,15 @@ double JointCalibration::fixed_safe_state() const
   return raw_to_joint(static_cast<std::int16_t>(joint_to_safe_raw(ros_reference)));
 }
 
+std::uint16_t JointCalibration::movement_duration_for(
+  std::uint16_t previous_raw, std::uint16_t target_raw) const
+{
+  // Gripper closing decreases its ROS position, even with a reversed raw axis.
+  const double delta = direction *
+    (static_cast<double>(target_raw) - static_cast<double>(previous_raw));
+  return delta < 0.0 ? closing_movement_duration_ms : movement_duration_ms;
+}
+
 bool HiwonderSystem::hardware_io_permitted(bool read_only, bool joint_hardware_io_enabled)
 {
   return !read_only && joint_hardware_io_enabled;
@@ -187,6 +196,17 @@ hardware_interface::CallbackReturn HiwonderSystem::on_init(
                   "joint '" + joint.name + "' has invalid movement_duration_ms");
         }
         calibration.movement_duration_ms = static_cast<std::uint16_t>(duration_ms);
+      }
+      calibration.closing_movement_duration_ms = calibration.movement_duration_ms;
+      if (const auto duration = joint.parameters.find("closing_movement_duration_ms");
+        duration != joint.parameters.end())
+      {
+        const int duration_ms = std::stoi(duration->second);
+        if (duration_ms < 1 || duration_ms > 60000) {
+          throw std::invalid_argument(
+                  "joint '" + joint.name + "' has invalid closing_movement_duration_ms");
+        }
+        calibration.closing_movement_duration_ms = static_cast<std::uint16_t>(duration_ms);
       }
       calibration.hardware_io_enabled = required_bool(joint, "hardware_io_enabled");
 
@@ -360,7 +380,8 @@ hardware_interface::return_type HiwonderSystem::write(
       const auto raw = joints_[index].joint_to_safe_raw(command);
       if (raw != last_written_raw_[index]) {
         driver_->move(
-          joints_[index].servo_id, raw, joints_[index].movement_duration_ms);
+          joints_[index].servo_id, raw,
+          joints_[index].movement_duration_for(last_written_raw_[index], raw));
         last_written_raw_[index] = raw;
       }
     }

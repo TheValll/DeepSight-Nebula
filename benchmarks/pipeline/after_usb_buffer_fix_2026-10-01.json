@@ -1,0 +1,294 @@
+{
+  "label": "after_usb_buffer_fix_2026-10-01",
+  "created_at": "2026-09-30T22:11:21.740815+00:00",
+  "warmup_seconds": 5.0,
+  "duration_seconds": 30.0,
+  "source_message_counts": {
+    "stereo": 901,
+    "yolo": 791,
+    "goal": 789,
+    "planning": 12
+  },
+  "metrics": [
+    {
+      "source": "goal",
+      "metric": "capture_to_goal_ms",
+      "count": 789,
+      "mean": 62.47762693662864,
+      "median": 61.955221,
+      "p95": 87.63819239999998,
+      "min": 31.316894,
+      "max": 101.154365
+    },
+    {
+      "source": "goal",
+      "metric": "filter_sample_count",
+      "count": 789,
+      "mean": 4.987325728770596,
+      "median": 5.0,
+      "p95": 5.0,
+      "min": 1.0,
+      "max": 5.0
+    },
+    {
+      "source": "goal",
+      "metric": "filter_window_ms",
+      "count": 789,
+      "mean": 152.1103478555133,
+      "median": 150.169097,
+      "p95": 185.04907319999995,
+      "min": 0.491058,
+      "max": 309.467389
+    },
+    {
+      "source": "goal",
+      "metric": "tf_filter_publish_ms",
+      "count": 789,
+      "mean": 0.7893495272496832,
+      "median": 0.776907,
+      "p95": 0.998912,
+      "min": 0.511088,
+      "max": 1.468234
+    },
+    {
+      "source": "planning",
+      "metric": "goal_to_request_ms",
+      "count": 12,
+      "mean": 19.590757166666666,
+      "median": 17.8781635,
+      "p95": 35.878667699999994,
+      "min": 2.857889,
+      "max": 36.361934
+    },
+    {
+      "source": "planning",
+      "metric": "moveit_planning_ms",
+      "count": 12,
+      "mean": 16.57556608333333,
+      "median": 13.8888195,
+      "p95": 49.48936934999997,
+      "min": 0.0,
+      "max": 77.742508
+    },
+    {
+      "source": "planning",
+      "metric": "request_to_result_ms",
+      "count": 12,
+      "mean": 487.60157875,
+      "median": 138.908213,
+      "p95": 1074.5990516,
+      "min": 33.809085,
+      "max": 1077.904941
+    },
+    {
+      "source": "planning",
+      "metric": "stable_window_ms",
+      "count": 12,
+      "mean": 137.32448608333334,
+      "median": 142.417274,
+      "p95": 160.0427435,
+      "min": 98.247585,
+      "max": 161.229484
+    },
+    {
+      "source": "planning",
+      "metric": "success",
+      "count": 12,
+      "mean": 0.5833333333333334,
+      "median": 1.0,
+      "p95": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "source": "planning",
+      "metric": "trajectory_duration_ms",
+      "count": 12,
+      "mean": 2192.87513775,
+      "median": 2971.040008,
+      "p95": 4581.11093835,
+      "min": 0.0,
+      "max": 4831.012724
+    },
+    {
+      "source": "planning",
+      "metric": "trajectory_points",
+      "count": 12,
+      "mean": 22.833333333333332,
+      "median": 31.5,
+      "p95": 47.25,
+      "min": 0.0,
+      "max": 50.0
+    },
+    {
+      "source": "stereo",
+      "metric": "camera_wait_ms",
+      "count": 901,
+      "mean": 33.335036998890125,
+      "median": 32.26428,
+      "p95": 36.591943,
+      "min": 29.445512,
+      "max": 37.891408
+    },
+    {
+      "source": "stereo",
+      "metric": "depth_ms",
+      "count": 901,
+      "mean": 13.60074734073252,
+      "median": 12.846828,
+      "p95": 17.769009,
+      "min": 11.360855,
+      "max": 19.559022
+    },
+    {
+      "source": "stereo",
+      "metric": "frame_period_ms",
+      "count": 901,
+      "mean": 33.340166071032186,
+      "median": 32.269191,
+      "p95": 36.595973,
+      "min": 29.451842,
+      "max": 37.896088
+    },
+    {
+      "source": "stereo",
+      "metric": "image_publish_ms",
+      "count": 901,
+      "mean": 0.8127540677025528,
+      "median": 0.790107,
+      "p95": 1.040386,
+      "min": 0.570257,
+      "max": 1.568914
+    },
+    {
+      "source": "stereo",
+      "metric": "rectification_ms",
+      "count": 901,
+      "mean": 2.0196944450610435,
+      "median": 1.966602,
+      "p95": 2.48563,
+      "min": 1.535914,
+      "max": 4.779761
+    },
+    {
+      "source": "stereo",
+      "metric": "total_processing_ms",
+      "count": 901,
+      "mean": 16.433515429522753,
+      "median": 15.654168,
+      "p95": 20.699457,
+      "min": 13.865554,
+      "max": 25.250449
+    },
+    {
+      "source": "stereo",
+      "metric": "visualization_ms",
+      "count": 901,
+      "mean": 0.00031957602663706995,
+      "median": 0.00026,
+      "p95": 0.00068,
+      "min": 3e-05,
+      "max": 0.01963
+    },
+    {
+      "source": "yolo",
+      "metric": "annotate_and_3d_ms",
+      "count": 791,
+      "mean": 0.7778527534766119,
+      "median": 0.385588,
+      "p95": 0.970261,
+      "min": 0.09434,
+      "max": 14.99565
+    },
+    {
+      "source": "yolo",
+      "metric": "capture_to_detection_ms",
+      "count": 791,
+      "mean": 61.44905262579014,
+      "median": 60.821166,
+      "p95": 86.5763275,
+      "min": 30.509358,
+      "max": 99.483172
+    },
+    {
+      "source": "yolo",
+      "metric": "conversion_ms",
+      "count": 791,
+      "mean": 0.3322920518331226,
+      "median": 0.316529,
+      "p95": 0.477453,
+      "min": 0.183559,
+      "max": 0.882686
+    },
+    {
+      "source": "yolo",
+      "metric": "detection_count",
+      "count": 791,
+      "mean": 1.1378002528445006,
+      "median": 1.0,
+      "p95": 2.0,
+      "min": 0.0,
+      "max": 2.0
+    },
+    {
+      "source": "yolo",
+      "metric": "inference_wall_ms",
+      "count": 791,
+      "mean": 33.495129797724395,
+      "median": 34.481562,
+      "p95": 41.977197000000004,
+      "min": 13.478195,
+      "max": 46.703543
+    },
+    {
+      "source": "yolo",
+      "metric": "queue_age_ms",
+      "count": 791,
+      "mean": 26.824698697850824,
+      "median": 23.751645,
+      "p95": 45.8355665,
+      "min": 14.681281,
+      "max": 56.586114
+    },
+    {
+      "source": "yolo",
+      "metric": "total_callback_ms",
+      "count": 791,
+      "mean": 34.60595493046776,
+      "median": 36.701072,
+      "p95": 43.331002,
+      "min": 14.175833,
+      "max": 55.882117
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_inference_ms",
+      "count": 791,
+      "mean": 25.3869561011378,
+      "median": 25.356458,
+      "p95": 33.638045000000005,
+      "min": 11.025426,
+      "max": 36.170376
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_postprocess_ms",
+      "count": 791,
+      "mean": 2.7061559709228824,
+      "median": 1.106656,
+      "p95": 8.2513215,
+      "min": 0.354098,
+      "max": 15.761727
+    },
+    {
+      "source": "yolo",
+      "metric": "ultralytics_preprocess_ms",
+      "count": 791,
+      "mean": 5.186543517067003,
+      "median": 5.810946,
+      "p95": 7.604674,
+      "min": 1.573614,
+      "max": 13.945344
+    }
+  ]
+}

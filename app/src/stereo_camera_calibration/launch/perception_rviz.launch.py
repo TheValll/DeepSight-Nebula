@@ -90,7 +90,6 @@ def generate_launch_description():
                 parameters=[
                     {
                         "target_frame": "base_link",
-                        "pregrasp_height": 0.05,
                         "sample_count": 10,
                     }
                 ],

@@ -3,10 +3,12 @@
 
   <!-- ==================== GRIPPER (prismatic simplification) ==================== -->
 
-  <!-- Tool centre point: measured centre between the two gripping fingers. -->
+  <!-- Tool centre point: estimated centre of a 40 mm ball held between the fingers.
+       Image measurement: 10.5 cm from wrist; ruler check: about 11 cm (2026-10-01).
+       This grasp reference still needs physical validation. -->
   <link name="gripper_tcp_link"/>
   <joint name="gripper_tcp_joint" type="fixed">
-    <origin xyz="0.0 -0.08 0.0" rpy="0.0 0.0 0.0"/>
+    <origin xyz="0.0207 -0.1025 -0.0068" rpy="0.0 0.0 0.0"/>
     <parent link="limb5_link"/>
     <child link="gripper_tcp_link"/>
   </joint>

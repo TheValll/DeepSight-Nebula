@@ -1,0 +1,81 @@
+{
+  "label": "camera_new_usb_port_2026-10-01",
+  "created_at": "2026-09-30T22:09:05.000115+00:00",
+  "warmup_seconds": 3.0,
+  "duration_seconds": 15.0,
+  "source_message_counts": {
+    "stereo": 225
+  },
+  "metrics": [
+    {
+      "source": "stereo",
+      "metric": "camera_wait_ms",
+      "count": 225,
+      "mean": 66.67422674222222,
+      "median": 67.802313,
+      "p95": 68.477102,
+      "min": 62.207617,
+      "max": 69.865476
+    },
+    {
+      "source": "stereo",
+      "metric": "depth_ms",
+      "count": 225,
+      "mean": 13.40737884888889,
+      "median": 12.527169,
+      "p95": 17.115406999999998,
+      "min": 11.366764,
+      "max": 18.265226
+    },
+    {
+      "source": "stereo",
+      "metric": "frame_period_ms",
+      "count": 225,
+      "mean": 66.68491929777777,
+      "median": 67.815703,
+      "p95": 68.487831,
+      "min": 62.220457,
+      "max": 69.876046
+    },
+    {
+      "source": "stereo",
+      "metric": "image_publish_ms",
+      "count": 225,
+      "mean": 0.33234065777777777,
+      "median": 0.332419,
+      "p95": 0.37630879999999994,
+      "min": 0.230539,
+      "max": 0.644907
+    },
+    {
+      "source": "stereo",
+      "metric": "rectification_ms",
+      "count": 225,
+      "mean": 1.8786112533333332,
+      "median": 1.876842,
+      "p95": 2.0333932,
+      "min": 1.601414,
+      "max": 3.019278
+    },
+    {
+      "source": "stereo",
+      "metric": "total_processing_ms",
+      "count": 225,
+      "mean": 15.61862867111111,
+      "median": 14.76742,
+      "p95": 19.402658999999996,
+      "min": 13.306056,
+      "max": 21.277553
+    },
+    {
+      "source": "stereo",
+      "metric": "visualization_ms",
+      "count": 225,
+      "mean": 0.0002979111111111111,
+      "median": 0.00029,
+      "p95": 0.00055,
+      "min": 0.0001,
+      "max": 0.0007
+    }
+  ]
+}

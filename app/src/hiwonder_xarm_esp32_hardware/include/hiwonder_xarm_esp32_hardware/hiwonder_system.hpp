@@ -25,11 +25,14 @@ struct JointCalibration
   std::int16_t raw_min{0};
   std::int16_t raw_max{1000};
   std::uint16_t movement_duration_ms{40};
+  std::uint16_t closing_movement_duration_ms{40};
   bool hardware_io_enabled{true};
 
   double raw_to_joint(std::int16_t raw) const;
   std::uint16_t joint_to_safe_raw(double joint_position) const;
   double fixed_safe_state() const;
+  std::uint16_t movement_duration_for(
+    std::uint16_t previous_raw, std::uint16_t target_raw) const;
 };
 
 class HiwonderSystem : public hardware_interface::SystemInterface

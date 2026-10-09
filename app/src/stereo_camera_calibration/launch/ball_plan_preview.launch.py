@@ -40,6 +40,9 @@ def generate_launch_description():
                     "calibration_file": calibration_file,
                     "camera_index": camera_index,
                     "show_debug_windows": False,
+                    "publish_depth_color": False,
+                    "publish_point_cloud": False,
+                    "publish_metrics": True,
                 }
             ],
             output="screen",
@@ -56,6 +59,8 @@ def generate_launch_description():
                     "imgsz": 1280,
                     "prompt": prompt,
                     "show_window": False,
+                    "publish_annotated_image": False,
+                    "publish_metrics": True,
                 }
             ],
             output="screen",
@@ -68,9 +73,9 @@ def generate_launch_description():
             parameters=[
                 {
                     "target_frame": "base_link",
-                    "pregrasp_height": 0.05,
-                    "sample_count": 10,
+                    "sample_count": 5,
                     "allow_latest_transform": True,
+                    "publish_metrics": True,
                 }
             ],
             output="screen",
@@ -84,13 +89,16 @@ def generate_launch_description():
                 {
                     "base_frame": "base_link",
                     "tip_link": "gripper_tcp_link",
-                    "pregrasp_height": 0.05,
                     "tcp_offset_y": 0.0,
                     "auto_plan": True,
-                    "stable_sample_count": 6,
+                    "stable_sample_count": 4,
                     "stable_tolerance": 0.025,
                     "replan_distance": 0.025,
-                    "min_replan_interval": 1.5,
+                    "min_replan_interval": 0.5,
+                    "auto_plan_period": 0.05,
+                    "planning_attempts": 2,
+                    "allowed_planning_time": 1.0,
+                    "publish_metrics": True,
                 }
             ],
             output="screen",

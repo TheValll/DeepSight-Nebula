@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-01",
+  "status": "estimated_pending_physical_validation",
+  "reference": "40 mm ping-pong ball held between the fingers; robot stationary",
+  "method": "Median of four sphere-silhouette fits using rectified camera intrinsics; transformed back to the physical optical frame and then limb5_link",
+  "camera_calibration_used": "/tmp/stereo_calib_standard.xml",
+  "camera_mount_changed": false,
+  "ball_diameter_m": 0.04,
+  "sphere_center_camera_optical_m": [0.0277514973, 0.0470918792, 0.0980110561],
+  "sphere_center_camera_distance_m": 0.11223,
+  "wrist_joint_position_rad": -0.008483,
+  "original_tcp_limb5_m": [0.0, -0.08, 0.0],
+  "estimated_tcp_limb5_m": [0.0207142641, -0.1024693000, -0.0067505905],
+  "installed_tcp_limb5_m": [0.0207, -0.1025, -0.0068],
+  "estimated_wrist_to_ball_center_m": 0.10476,
+  "approximate_ruler_camera_to_ball_center_m": 0.12,
+  "approximate_ruler_wrist_to_ball_center_m": 0.11,
+  "limitations": [
+    "Camera mounting must remain rigid and match the robot description",
+    "Single grasp reference; does not independently calibrate the full camera extrinsic transform",
+    "Ball outline partly occluded; ruler measurements approximate",
+    "Stereo detector currently uses median surface depth rather than a sphere-centre fit"
+  ]
+}
