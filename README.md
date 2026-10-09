@@ -857,15 +857,15 @@ RViz no longer repeats the animation, and the old target disappears after the pi
 
 Basic pick:
 
-![Basic physical ball pick](schemas/physical_ball_pick_basic.gif)
+![Basic physical ball pick](schemas/schema23.gif)
 
 Pick from my hand:
 
-![Physical ball pick from my hand](schemas/physical_ball_pick_hand.gif)
+![Physical ball pick from my hand](schemas/schema24.gif)
 
 Pick from the desk:
 
-![Physical ball pick from the desk](schemas/physical_ball_pick_desk.gif)
+![Physical ball pick from the desk](schemas/schema25.gif)
 
 **Next steps.**
 

@@ -15,8 +15,8 @@ except ImportError:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_INPUT_DIR = PROJECT_ROOT / "datasets" / "tennis_ball" / "videos"
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "datasets" / "tennis_ball" / "frames"
+DEFAULT_INPUT_DIR = PROJECT_ROOT / "datasets" / "ping_pong_ball" / "videos"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "datasets" / "ping_pong_ball" / "frames"
 VIDEO_EXTENSIONS = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".webm"}
 
 

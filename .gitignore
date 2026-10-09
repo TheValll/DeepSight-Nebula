@@ -17,6 +17,8 @@ images
 # Local tennis-ball training captures (potentially large)
 /datasets/tennis_ball/videos/
 /datasets/tennis_ball/frames/
+/datasets/ping_pong_ball/videos/
+/datasets/ping_pong_ball/frames/
 
 # Downloaded benchmark model assets
 /benchmarks/yolo/models/

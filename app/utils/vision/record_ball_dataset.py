@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Record a clean tennis-ball dataset video from the stereo robot camera."""
+"""Record a clean ping-pong-ball dataset video from the stereo robot camera."""
 
 import argparse
 import json
+import math
 import re
 import sys
 import time
@@ -17,8 +18,8 @@ except ImportError:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "datasets" / "tennis_ball" / "videos"
-WINDOW_NAME = "Tennis dataset recorder - robot left camera"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "datasets" / "ping_pong_ball" / "videos"
+WINDOW_NAME = "Ping-pong dataset recorder - robot left camera"
 
 
 def parse_args():
@@ -29,9 +30,13 @@ def parse_args():
         default=10.0,
         help="recording duration in seconds (default: 10)",
     )
-    parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index")
+    parser.add_argument("--camera", type=int, default=2, help="OpenCV camera index (default: 2)")
     parser.add_argument("--countdown", type=float, default=3.0, help="countdown in seconds")
-    parser.add_argument("--fps", type=float, default=60.0, help="requested camera FPS")
+    parser.add_argument("--fps", type=float, default=30.0, help="requested camera FPS (default: 30)")
+    parser.add_argument(
+        "--ball-color", choices=("white", "orange", "both", "none"), default="white",
+        help="ball color, or none for a background video (default: white)",
+    )
     parser.add_argument(
         "--scene",
         default="scene",
@@ -50,7 +55,8 @@ def parse_args():
         help="MJPG preserves details better; mp4v uses less disk space",
     )
     args = parser.parse_args()
-    if args.duration <= 0 or args.countdown < 0 or args.fps <= 0:
+    if (not all(math.isfinite(v) for v in (args.duration, args.countdown, args.fps))
+            or args.duration <= 0 or args.countdown < 0 or args.fps <= 0):
         parser.error("--duration and --fps must be positive; --countdown cannot be negative")
     return args
 
@@ -89,11 +95,14 @@ def main():
     camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not camera.isOpened():
         print(f"Could not open camera index {args.camera}.", file=sys.stderr)
+        camera.release()
         return 1
 
     actual_width = int(round(camera.get(cv2.CAP_PROP_FRAME_WIDTH)))
     actual_height = int(round(camera.get(cv2.CAP_PROP_FRAME_HEIGHT)))
     actual_fps = camera.get(cv2.CAP_PROP_FPS)
+    saved_fps = actual_fps if math.isfinite(actual_fps) and actual_fps > 0 else args.fps
+    print(f"Camera: {actual_width}x{actual_height}, reported FPS: {actual_fps:g}; video FPS: {saved_fps:g}")
     if (actual_width, actual_height) != (2560, 720):
         print(
             f"Unexpected camera stream {actual_width}x{actual_height}; expected 2560x720.",
@@ -104,11 +113,12 @@ def main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     extension = ".avi" if args.codec == "MJPG" else ".mp4"
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = args.output_dir / f"{timestamp}_{safe_slug(args.scene)}{extension}"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    output_path = args.output_dir / f"{timestamp}_{safe_slug(args.scene)}_{args.ball_color}{extension}"
     metadata_path = output_path.with_suffix(".json")
 
     cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    writer = None
     print("Press SPACE to start recording or ESC to quit.")
     try:
         while True:
@@ -120,6 +130,7 @@ def main():
                 frame,
                 [
                     f"Scene: {safe_slug(args.scene)}",
+                    f"Ball: {args.ball_color}",
                     f"Duration: {args.duration:g} s",
                     "SPACE: start | ESC: quit",
                 ],
@@ -148,7 +159,7 @@ def main():
         writer = cv2.VideoWriter(
             str(output_path),
             cv2.VideoWriter_fourcc(*args.codec),
-            args.fps,
+            saved_fps,
             (1280, 720),
         )
         if not writer.isOpened():
@@ -178,17 +189,24 @@ def main():
                 break
         recorded_duration = time.perf_counter() - started
         writer.release()
+        if frames_written == 0:
+            print("No frames recorded; video is not usable.", file=sys.stderr)
+            return 1
 
         metadata = {
             "video": output_path.name,
             "recorded_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             "scene": safe_slug(args.scene),
+            "ball_color": args.ball_color,
+            "target": "ping pong ball",
             "camera_index": args.camera,
             "source_resolution": [actual_width, actual_height],
             "saved_resolution": [1280, 720],
             "camera_side": "left",
             "requested_fps": args.fps,
             "reported_fps": actual_fps,
+            "saved_fps": saved_fps,
+            "measured_capture_fps": frames_written / recorded_duration,
             "frames": frames_written,
             "duration_s": recorded_duration,
             "codec": args.codec,
@@ -199,6 +217,8 @@ def main():
         print(f"Metadata: {metadata_path}")
         return 0
     finally:
+        if writer is not None:
+            writer.release()
         camera.release()
         cv2.destroyAllWindows()
 
