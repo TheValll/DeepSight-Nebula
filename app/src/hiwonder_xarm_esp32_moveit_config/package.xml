@@ -37,6 +37,10 @@
   <exec_depend>position_controllers</exec_depend>
   <exec_depend>hiwonder_xarm_esp32_description</exec_depend>
   <exec_depend>moveit_configs_utils</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
   <exec_depend>moveit_ros_move_group</exec_depend>
   <exec_depend>moveit_ros_visualization</exec_depend>
   <exec_depend>moveit_ros_warehouse</exec_depend>

@@ -6,6 +6,7 @@ find_package(ament_cmake REQUIRED)
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_calibration_rviz_launch test/test_calibration_rviz_launch.py)
+  ament_add_pytest_test(test_ground test/test_ground.py)
 endif()
 
 ament_package()
@@ -18,4 +19,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/launch")
 endif()
 
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS scripts/add_ground.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME add_ground)
 install(FILES .setup_assistant DESTINATION share/${PROJECT_NAME})

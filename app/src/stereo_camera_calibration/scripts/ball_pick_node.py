@@ -76,7 +76,7 @@ class BallPickNode(Node):
             self.declare_parameter('velocity_scaling', 0.35).value
         )
         self.acceleration_scaling = float(
-            self.declare_parameter('acceleration_scaling', 0.35).value
+            self.declare_parameter('acceleration_scaling', 0.05).value
         )
         self.gripper_open_position = float(
             self.declare_parameter('gripper_open_position', 0.013651).value

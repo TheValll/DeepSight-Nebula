@@ -99,7 +99,8 @@ def generate_launch_description():
                         'planning_attempts': 2,
                         'allowed_planning_time': 1.0,
                         'velocity_scaling': 0.35,
-                        'acceleration_scaling': 0.35,
+                        # Gentler acceleration AND deceleration under camera load.
+                        'acceleration_scaling': 0.05,
                         'gripper_open_position': 0.013651,
                         'gripper_closed_position': -0.013651,
                         'gripper_max_effort': 10.0,

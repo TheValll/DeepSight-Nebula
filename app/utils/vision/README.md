@@ -25,3 +25,32 @@ cd /home/valentin/DeepSight-Nebula
 .venv/bin/python app/utils/vision/extract_ball_frames.py \
   --all-frames
 ```
+
+```bash
+# Generate proposals and previews. Review them before training.
+.venv/bin/python app/utils/vision/preannotate_ball_dataset.py
+```
+
+```bash
+# After manual review and export: prepare separate train/val/test videos.
+# Never overwrites an existing prepared dataset.
+.venv/bin/python app/utils/vision/prepare_ball_dataset.py
+```
+
+```bash
+# Train the 9 models, one after another on CUDA. Use a new output folder each time.
+.venv/bin/python app/utils/vision/finetune_ball_models.py \
+  --output benchmarks/finetuning/ping_pong_20261010 \
+  --imgsz 1280 --epochs 100 --patience 20 --batch 4
+```
+
+Same dataset and settings for all models. YOLOE learns boxes, not masks.
+Check progress in `benchmarks/finetuning/ping_pong_20261010/queue.json`.
+Each model has a log and a `weights/best.pt`. Camera benchmarks come afterwards.
+
+```bash
+# After stopping the training and restarting the PC: resume the same queue.
+# Completed models are skipped. Interrupted training resumes from last.pt.
+.venv/bin/python app/utils/vision/finetune_ball_models.py \
+  --output benchmarks/finetuning/ping_pong_20261010 --resume
+```

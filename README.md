@@ -191,6 +191,21 @@ The model, prompt, confidence, and camera index can be overridden with launch ar
 ros2 launch stereo_camera_calibration perception_rviz.launch.py camera_index:=2
 ```
 
+Show YOLO26n FT detections in MoveIt, without automatic planning or physical movements.
+Run from the project root:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+source .venv/bin/activate
+ros2 launch stereo_camera_calibration ball_detection_moveit.launch.py \
+  camera_index:=2 serial_port:=/dev/ttyUSB0
+```
+
+This uses the fine-tuned ball class, confidence 0.50 and image size 1280, without a prompt.
+MoveIt reads the real robot positions in read-only mode. No motor commands are sent.
+RViz shows the camera detections and is limited to 30 FPS.
+
 ###### How it works
 
 1. The script uses VideoCapture (default index: 0) in the capture_frames function. The stereo stream is configured
@@ -801,28 +816,44 @@ While measuring the mechanical limits, the cable between servos 1 and 2 broke at
 
 ### 2026-09-10 — Ping-pong ball benchmarks
 
-I ran 18 benchmarks with orange and white ping-pong balls. All models use a 1280 image on the RTX 5080.
-The standard models use a 0.15 confidence threshold. Prompted models use 0.50.
+I recorded 14 videos and benchmarked 18 model versions with orange and white ping-pong balls.
+Every model uses the same videos, including movements and scenes without a ball.
+
+All models use the RTX 5080, image size 1280 and a 50% confidence threshold.
+Original YOLOE models also use the text prompt `ping pong ball`.
+
+I checked 850 images by hand, one frame out of five.
+The benchmark videos were not used for training.
 
 ![Ping-pong ball benchmark environment](schemas/schema20.jpg)
 
-| Model | Orange | White | Inference | GPU | VRAM |
-|:---|---:|---:|---:|---:|---:|
-| YOLO11n | 4.20% | 34.40% | 6.58 ms | 9.13% | 1,330 MB |
-| YOLO11s | 0.00% | 19.27% | 6.57 ms | 12.77% | 1,397 MB |
-| YOLO11m | 19.80% | 23.18% | 9.17 ms | 23.92% | 1,620 MB |
-| YOLO26n | 0.20% | 0.00% | 6.73 ms | 9.77% | 1,325 MB |
-| YOLO26s | 0.47% | 0.07% | 6.84 ms | 13.97% | 1,456 MB |
-| YOLO26m | 2.60% | 18.25% | 9.14 ms | 24.18% | 1,617 MB |
-| YOLOE-26n + prompt | 42.60% | 32.38% | 7.34 ms | 11.75% | 1,396 MB |
-| YOLOE-26s + prompt | 36.90% | 53.73% | 8.14 ms | 17.94% | 1,467 MB |
-| YOLOE-26m + prompt | 81.68% | 84.86% | 12.71 ms | 34.42% | 1,740 MB |
+Detection shows how often the real ball is correctly found in the checked images.
+Precision shows how often a predicted box is correct. F1 combines both.
+FP counts false or badly placed boxes (IoU below 50%).
+100% precision does not mean the model finds every ball.
+I also measure processing speed, graphics card usage and memory usage.
 
-YOLOE-26m is the best model. It reaches 83.27% detection overall and stays close to 30 FPS.
-Its weakest movement is free depth motion at 58.30%.
+| Model | Ball | Detection | Precision | F1 | FP | FPS | GPU | RAM (GiB) | VRAM (GiB) |
+|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|
+| YOLO11n | Orange | 0.7% | 100.0% | 1.3% | 0 | 143 | 32% | 1.63 | 1.86 |
+| YOLO11n | White | 30.5% | 100.0% | 46.7% | 0 | 150 | 33% | 1.64 | 1.86 |
+| YOLO11s | Orange | 0.3% | 100.0% | 0.7% | 0 | 140 | 47% | 1.65 | 1.91 |
+| YOLO11s | White | 20.3% | 100.0% | 33.8% | 0 | 139 | 49% | 1.65 | 1.91 |
+| YOLO11m | Orange | 1.0% | 100.0% | 2.0% | 0 | 90 | 66% | 1.64 | 2.12 |
+| YOLO11m | White | 16.1% | 100.0% | 27.7% | 0 | 90 | 67% | 1.64 | 2.12 |
+| YOLO26n | Orange | 3.3% | 100.0% | 6.4% | 0 | 120 | 30% | 1.55 | 1.86 |
+| YOLO26n | White | 0.7% | 100.0% | 1.3% | 0 | 118 | 36% | 1.56 | 1.92 |
+| YOLO26s | Orange | 0.0% | — | 0.0% | 0 | 132 | 50% | 1.57 | 2.01 |
+| YOLO26s | White | 0.3% | 100.0% | 0.7% | 0 | 133 | 52% | 1.57 | 1.99 |
+| YOLO26m | Orange | 1.7% | 100.0% | 3.2% | 0 | 89 | 67% | 1.57 | 2.13 |
+| YOLO26m | White | 30.2% | 100.0% | 46.3% | 0 | 89 | 69% | 1.57 | 2.13 |
+| YOLOE-26n | Orange | 89.4% | 96.1% | 92.6% | 11 | 116 | 40% | 1.96 | 1.89 |
+| YOLOE-26n | White | 86.9% | 85.5% | 86.2% | 45 | 115 | 40% | 1.96 | 1.91 |
+| YOLOE-26s | Orange | 58.4% | 100.0% | 73.8% | 0 | 106 | 57% | 1.89 | 1.98 |
+| YOLOE-26s | White | 80.7% | 96.5% | 87.9% | 9 | 105 | 57% | 1.89 | 1.98 |
+| YOLOE-26m | Orange | 80.5% | 98.4% | 88.6% | 4 | 66 | 75% | 1.97 | 2.22 |
+| YOLOE-26m | White | 88.2% | 94.1% | 91.0% | 17 | 66 | 75% | 1.97 | 2.22 |
 
-The prompt makes a large difference. Standard YOLO11 and YOLO26 are not reliable enough here.
-System RAM stayed between 3.9 and 4.2 GB.
 
 ### 2026-09-30 — MoveIt replanning
 
@@ -870,4 +901,128 @@ Pick from the desk:
 **Next steps.**
 
 - Test more ball positions.
+- Improve performance and reduce processing delay.
+
+### 2026-10-11 — Ping-pong dataset and fine-tuning
+
+This week, I recorded 22 videos with white and orange ping-pong balls in the living room and bedroom.
+I changed the lighting, distance and movement.
+I also recorded two videos without a ball.
+I extracted 3,302 images from these videos.
+
+YOLOE-26m drew the first boxes around the balls.
+I then checked and corrected every image.
+The dataset contains 3,364 ball boxes and 301 images without a ball.
+
+I split the images into three groups: training, validation and test.
+Images from the same video stay in the same group.
+84.86% 	
+| Split | Images | Videos |
+|:---|---:|---:|
+| Training | 2,401 | 16 |
+| Validation | 451 | 3 |
+| Test | 450 | 3 |
+
+I trained the nine models to recognise my ping-pong balls.
+They all use the same images and training settings on the RTX 5080.
+Here are the training times:
+
+| Model | Epochs | Training time |
+|:---|---:|---:|
+| YOLO11n | 44 | 21 min 15 s |
+| YOLO11s | 39 | 27 min 43 s |
+| YOLO11m | 68 | 1 h 29 min 54 s |
+| YOLO26n | 55 | 30 min 42 s |
+| YOLO26s | 56 | 46 min 16 s |
+| YOLO26m | 31 | 47 min 43 s |
+| YOLOE-26n | 35 | 20 min 43 s |
+| YOLOE-26s | 21 | 17 min 50 s |
+| YOLOE-26m | 37 | 56 min 51 s |
+| **Total** | **386** | **About 6 hours** |
+
+I then repeated the same video tests with the nine trained models.
+The test settings are the same as above. No text prompt is needed.
+The 850 benchmark images are separate from the dataset above.
+Detection shows how often the real ball is correctly found.
+
+FT means fine-tuned on my ping-pong ball dataset.
+
+| Model | Ball | Detection | Precision | F1 | FP | FPS | GPU | RAM (GiB) | VRAM (GiB) |
+|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|
+| YOLO11n FT | Orange | 92.1% | 97.9% | 94.9% | 6 | 127 | 28% | 1.63 | 1.85 |
+| YOLO11n FT | White | 86.9% | 99.6% | 92.8% | 1 | 136 | 30% | 1.63 | 1.85 |
+| YOLO11s FT | Orange | 95.7% | 57.5% | 71.9% | 214 | 136 | 46% | 1.65 | 1.91 |
+| YOLO11s FT | White | 92.8% | 46.1% | 61.6% | 331 | 136 | 48% | 1.65 | 1.91 |
+| YOLO11m FT | Orange | 98.0% | 66.9% | 79.5% | 147 | 89 | 64% | 1.64 | 2.12 |
+| YOLO11m FT | White | 96.1% | 46.4% | 62.6% | 338 | 88 | 67% | 1.64 | 2.13 |
+| YOLO26n FT | Orange | 98.0% | 98.7% | 98.3% | 4 | 126 | 30% | 1.57 | 1.89 |
+| YOLO26n FT | White | 97.7% | 98.0% | 97.9% | 6 | 118 | 29% | 1.57 | 1.89 |
+| YOLO26s FT | Orange | 93.1% | 98.9% | 95.9% | 3 | 129 | 53% | 1.59 | 1.99 |
+| YOLO26s FT | White | 92.5% | 99.6% | 95.9% | 1 | 132 | 52% | 1.59 | 1.98 |
+| YOLO26m FT | Orange | 91.4% | 83.2% | 87.1% | 56 | 89 | 69% | 1.59 | 2.13 |
+| YOLO26m FT | White | 94.4% | 91.7% | 93.1% | 26 | 89 | 68% | 1.59 | 2.11 |
+| YOLOE-26n FT | Orange | 82.5% | 98.8% | 89.9% | 3 | 116 | 28% | 1.51 | 1.84 |
+| YOLOE-26n FT | White | 97.0% | 98.7% | 97.9% | 4 | 117 | 29% | 1.51 | 1.84 |
+| YOLOE-26s FT | Orange | 97.4% | 70.7% | 81.9% | 122 | 129 | 49% | 1.53 | 1.96 |
+| YOLOE-26s FT | White | 98.7% | 86.7% | 92.3% | 46 | 131 | 51% | 1.53 | 1.96 |
+| YOLOE-26m FT | Orange | 72.6% | 77.2% | 74.8% | 65 | 89 | 66% | 1.53 | 2.10 |
+| YOLOE-26m FT | White | 68.9% | 64.6% | 66.7% | 115 | 89 | 67% | 1.53 | 2.10 |
+
+#### Model selection with PEI
+
+I built a PEI score to compare detection quality, confidence and resource usage.
+Once my limits are met, I prefer saving memory over finding a few more balls.
+RAM and GPU memory have the same weight. Keeping CPU resources available matters more than GPU resources.
+
+| Criterion | Weight |
+|:---|---:|
+| Detection quality (F1) | 30% |
+| Program RAM | 20% |
+| GPU memory | 20% |
+| Processing time (p95) | 10% |
+| CPU usage | 10% |
+| GPU usage | 5% |
+| Confidence of correct detections | 5% |
+
+F1 includes missed balls and false detections, including the no-ball videos.
+Detection is not counted a second time. Confidence only counts on correct detections.
+
+I also chose acceptable limits:
+
+| Criterion | Acceptable limit |
+|:---|:---|
+| Detection | At least 87% |
+| Overall precision | At least 96% |
+| Processing time p95 | At most 40 ms; 33 ms preferred |
+| Mean confidence on correct detections | 85% preferred, not mandatory |
+
+p95 means 95% of images are processed within this time.
+YOLO11n FT, YOLO26n FT and YOLO26s FT meet the mandatory limits in these tests.
+These limits use both colors together, with no-ball errors included in precision.
+
+I recalculated PEI for all 18 versions. Scores range from 0 to 1; higher is better.
+Models in bold meet my limits. The other models stay in the table for comparison.
+
+| Model | PEI |
+|:---|---:|
+| YOLOE-26n FT | 0.903 |
+| **YOLO26n FT** | 0.898 |
+| **YOLO11n FT** | 0.888 |
+| **YOLO26s FT** | 0.832 |
+| YOLOE-26s FT | 0.814 |
+| YOLO11s FT | 0.744 |
+| YOLO26m FT | 0.687 |
+| YOLO11n | 0.677 |
+| YOLOE-26n | 0.663 |
+| YOLOE-26m FT | 0.634 |
+| YOLO11s | 0.606 |
+| YOLOE-26s | 0.603 |
+| YOLO26n | 0.597 |
+| YOLO11m FT | 0.588 |
+| YOLO26s | 0.532 |
+| YOLO26m | 0.494 |
+| YOLO11m | 0.432 |
+| YOLOE-26m | 0.405 |
+
+**Next steps.**
 - Improve performance and reduce processing delay.

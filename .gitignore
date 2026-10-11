@@ -19,6 +19,8 @@ images
 /datasets/tennis_ball/frames/
 /datasets/ping_pong_ball/videos/
 /datasets/ping_pong_ball/frames/
+/datasets/ping_pong_ball/annotations/
+/datasets/ping_pong_ball/prepared/
 
 # Downloaded benchmark model assets
 /benchmarks/yolo/models/
@@ -46,3 +48,8 @@ test_hiwonder
 test_hiwonder_xarm_rust_driver
 test_hiwonder_xarm_rust_driver_hardware
 /mobileclip2_b.ts
+
+# Local fine-tuning checkpoints and logs (large files)
+/benchmarks/finetuning/
+/benchmarks/yolo/results/
+/benchmarks/yolo/videos/

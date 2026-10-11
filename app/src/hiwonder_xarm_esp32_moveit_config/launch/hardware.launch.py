@@ -71,4 +71,10 @@ def generate_launch_description():
     for action in generate_spawn_controllers_launch(moveit_config).entities:
         launch_description.add_action(action)
 
+    launch_description.add_action(Node(
+        package='hiwonder_xarm_esp32_moveit_config',
+        executable='add_ground',
+        output='screen',
+    ))
+
     return launch_description

@@ -41,6 +41,9 @@ class YoloDetectionNode(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.ball_diameter = float(self.declare_parameter("ball_diameter", 0.04).value)
         self.show_window = bool(self.declare_parameter("show_window", True).value)
+        self.show_marker_labels = bool(
+            self.declare_parameter("show_marker_labels", True).value
+        )
         self.publish_annotated_image = bool(
             self.declare_parameter("publish_annotated_image", True).value
         )
@@ -281,7 +284,8 @@ class YoloDetectionNode(Node):
                             f"{confidence:.2f} | {median_depth:.3f} m"
                         )
                         text.lifetime = Duration(seconds=0.25).to_msg()
-                        markers.markers.append(text)
+                        if self.show_marker_labels:
+                            markers.markers.append(text)
 
                 text_origin = (int(x1), max(25, int(y2) - 8))
                 if annotated is not None:
