@@ -51,5 +51,8 @@ test_hiwonder_xarm_rust_driver_hardware
 
 # Local fine-tuning checkpoints and logs (large files)
 /benchmarks/finetuning/
-/benchmarks/yolo/results/
+# Keep benchmark CSVs; ignore intermediate reports and predictions.
+/benchmarks/yolo/results/**
+!/benchmarks/yolo/results/**/
+!/benchmarks/yolo/results/**/*.csv
 /benchmarks/yolo/videos/
