@@ -5,16 +5,24 @@ from math import isfinite
 
 import rclpy
 from geometry_msgs.msg import Pose
-from moveit_msgs.msg import AllowedCollisionEntry, CollisionObject, PlanningSceneComponents
+from moveit_msgs.msg import (
+    AllowedCollisionEntry, CollisionObject, LinkPadding, PlanningSceneComponents,
+)
 from moveit_msgs.srv import ApplyPlanningScene, GetPlanningScene
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from shape_msgs.msg import SolidPrimitive
 
 
-def add_floor(scene, height=0.0, clearance=0.005):
-    """Keep all existing collision rules, allowing only the fixed base contact."""
-    if not all(isfinite(v) for v in (height, clearance)) or clearance < 0:
-        raise ValueError('Floor height must be finite and clearance nonnegative')
+def add_floor(scene, height=0.0, clearance=0.005, padded_links=(), padding=0.0):
+    """Keep all existing collision rules, allowing only the fixed base contact.
+
+    padded_links get an extra collision margin of padding metres, so only the
+    end of the arm keeps away from the desk while the floor stays at its real height.
+    """
+    if (not all(isfinite(v) for v in (height, clearance, padding))
+            or clearance < 0 or padding < 0):
+        raise ValueError('Floor height must be finite; clearance and padding nonnegative')
     floor = CollisionObject()
     floor.id = 'ground'
     floor.header.frame_id = 'base_link'
@@ -23,6 +31,9 @@ def add_floor(scene, height=0.0, clearance=0.005):
     pose = Pose()
     pose.orientation.w = 1.0
     pose.position.z = height + clearance - 0.05
+    scene.link_padding = [
+        LinkPadding(link_name=name, padding=padding) for name in padded_links
+    ]
     floor.primitives = [box]
     floor.primitive_poses = [pose]
     scene.world.collision_objects = [floor]
@@ -50,6 +61,9 @@ def main():
     node = Node('ground_collision')
     height = float(node.declare_parameter('floor_height', 0.0).value)
     clearance = float(node.declare_parameter('floor_clearance', 0.005).value)
+    padded_links = list(node.declare_parameter(
+        'padded_links', Parameter.Type.STRING_ARRAY).value or [])
+    padding = float(node.declare_parameter('link_padding', 0.0).value)
     get = node.create_client(GetPlanningScene, '/get_planning_scene')
     apply = node.create_client(ApplyPlanningScene, '/apply_planning_scene')
     try:
@@ -62,14 +76,16 @@ def main():
         if not future.done() or future.result() is None:
             raise RuntimeError('Cannot read current collision rules')
         request = ApplyPlanningScene.Request()
-        request.scene = add_floor(deepcopy(future.result().scene), height, clearance)
+        request.scene = add_floor(
+            deepcopy(future.result().scene), height, clearance, padded_links, padding)
         future = apply.call_async(request)
         rclpy.spin_until_future_complete(node, future, timeout_sec=5)
         if not future.done() or not future.result() or not future.result().success:
             raise RuntimeError('MoveIt refused ground collision object')
         node.get_logger().info(
             f'Ground installed in base_link: floor z={height:.3f} m, '
-            f'clearance={clearance:.3f} m. Only fixed base contact allowed.')
+            f'clearance={clearance:.3f} m, padding={padding:.3f} m on '
+            f'{padded_links}. Only fixed base contact allowed.')
     finally:
         node.destroy_node()
         rclpy.shutdown()

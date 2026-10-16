@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,9 @@ public:
 
   // Kept public to unit-test the no-output policy without instantiating a serial driver.
   static bool hardware_io_permitted(bool read_only, bool joint_hardware_io_enabled);
+  // A lost servo reply keeps the last position; activation reads stay strict.
+  static bool read_failure_tolerated(
+    int consecutive_failures, int max_consecutive_failures, bool initializing);
 
 private:
   hardware_interface::CallbackReturn connect();
@@ -65,10 +69,12 @@ private:
   std::vector<JointCalibration> joints_;
   std::vector<double> previous_positions_;
   std::vector<std::uint16_t> last_written_raw_;
+  std::vector<int> read_failures_;
   std::string port_{"/dev/ttyUSB0"};
   int baudrate_{115200};
   int timeout_ms_{50};
   int startup_delay_ms_{2000};
+  int max_consecutive_read_failures_{5};
   std::uint16_t movement_duration_ms_{40};
   bool read_only_{false};
   std::string mimic_joint_name_{"gripper_right_joint"};

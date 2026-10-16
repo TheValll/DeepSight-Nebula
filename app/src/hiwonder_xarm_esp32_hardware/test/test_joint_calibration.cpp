@@ -33,3 +33,13 @@ TEST(JointMovementDuration, ArmDurationIsUnchangedInBothDirections)
     EXPECT_EQ(arm.movement_duration_for(786, 270), 40);
   }
 }
+
+TEST(ReadFailures, LostRepliesAreToleratedOnlyWhileRunning)
+{
+  using hiwonder_xarm_esp32_hardware::HiwonderSystem;
+  EXPECT_TRUE(HiwonderSystem::read_failure_tolerated(1, 5, false));
+  EXPECT_TRUE(HiwonderSystem::read_failure_tolerated(5, 5, false));
+  EXPECT_FALSE(HiwonderSystem::read_failure_tolerated(6, 5, false));
+  EXPECT_FALSE(HiwonderSystem::read_failure_tolerated(1, 5, true));
+  EXPECT_FALSE(HiwonderSystem::read_failure_tolerated(1, 0, false));
+}

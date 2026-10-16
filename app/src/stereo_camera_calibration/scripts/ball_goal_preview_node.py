@@ -24,6 +24,9 @@ class BallGoalPreviewNode(Node):
         super().__init__("ball_goal_preview_node")
 
         self.target_frame = str(self.declare_parameter("target_frame", "base_link").value)
+        self.show_marker_labels = bool(
+            self.declare_parameter("show_marker_labels", True).value
+        )
         # Optional empirical base-frame offset; disabled until calibrated.
         # This is not a general sphere/depth fit.
         self.center_offset_z = float(
@@ -209,6 +212,10 @@ class BallGoalPreviewNode(Node):
         target.color.a = 0.9
         target.lifetime = lifetime
         markers.markers.append(target)
+
+        if not self.show_marker_labels:
+            self.marker_publisher.publish(markers)
+            return
 
         label = Marker()
         label.header = goal.header

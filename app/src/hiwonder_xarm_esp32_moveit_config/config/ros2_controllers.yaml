@@ -33,6 +33,13 @@ arm_controller:
 gripper_controller:
   ros__parameters:
     joint: gripper_left_joint
-    # Opening takes 1 s and closing takes 3 s. Allow 2 s without progress
-    # before reporting a stalled goal to MoveIt.
-    stall_timeout: 2.0
+    # Do not report full closure while still millimetres from the target.
+    goal_tolerance: 0.0005
+    # Opening takes 1 s and closing takes 0.5 s. Confirm object contact
+    # after 0.5 s without motion before returning the arm.
+    stall_timeout: 0.5
+    # A held ball prevents full closure; treat this as a completed grasp.
+    allow_stalling: true
+    # One raw encoder step at 25 Hz is about 0.00135 m/s.
+    # Ignore this measurement jitter when detecting a stopped gripper.
+    stall_velocity_threshold: 0.003

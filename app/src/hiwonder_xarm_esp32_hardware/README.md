@@ -11,8 +11,18 @@ Each commanded joint uses the following reversible conversion:
 joint = ros_reference + direction * (raw - raw_reference) * units_per_raw
 ```
 
-Revolute joints use `4.1887902047863905 / 1000` radians per raw unit. The
-gripper uses a linear approximation of `0.03 / 556` metres per raw unit.
+The nominal servo scale is `4.1887902047863905 / 1000` radians per raw unit
+(240° per 1000 units). The real servos turn slightly more. I measured each
+pitch joint alone against a fixed checkerboard seen by the camera:
+
+| Servo | Joint | Scale factor | Radians per raw unit |
+|---:|---|---:|---:|
+| 5 | `limb2_to_limb1_joint` | 1.070 | 0.0044820 |
+| 4 | `limb3_to_limb2_joint` | 1.056 | 0.0044234 |
+| 3 | `limb4_to_limb3_joint` | 1.045 | 0.0043773 |
+
+The base and wrist rotation keep the nominal value. The gripper uses a linear
+approximation of `0.03 / 556` metres per raw unit.
 
 The current references come from the pose measured in RViz:
 
@@ -66,7 +76,10 @@ ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py \
 ```
 
 The plugin reads all six servos and initializes the controller commands from
-their actual positions before accepting trajectory commands. Deactivation
+their actual positions before accepting trajectory commands. During operation,
+a lost servo reply is retried once; the joint then keeps its last position for
+up to `max_consecutive_read_failures` cycles (5 by default) before the plugin
+reports an error. Reads during activation stay strict. Deactivation
 sends a stop command to every servo but does not unload their torque.
 
 ## First physical validation

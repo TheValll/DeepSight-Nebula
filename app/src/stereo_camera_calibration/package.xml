@@ -27,6 +27,7 @@
   <exec_depend>action_msgs</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>control_msgs</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
   <exec_depend>hiwonder_xarm_esp32_moveit_config</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>joint_state_publisher_gui</exec_depend>

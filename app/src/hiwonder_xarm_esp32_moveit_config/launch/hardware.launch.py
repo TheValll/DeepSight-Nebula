@@ -74,6 +74,17 @@ def generate_launch_description():
     launch_description.add_action(Node(
         package='hiwonder_xarm_esp32_moveit_config',
         executable='add_ground',
+        # The suction cups raise base_link about 5 mm above the desk
+        # (checkerboard measurement, 2026-10-16). A grasp brings the servo 1
+        # housing about 7 mm from the desk; the pick node removes the servo sag
+        # before the final descent, so keep a 4 mm margin on that housing only.
+        parameters=[{
+            'floor_height': -0.005,
+            'floor_clearance': 0.0,
+            # Only the servo 1 housing; padded fingers could not reach the ball.
+            'padded_links': ['limb5_link'],
+            'link_padding': 0.004,
+        }],
         output='screen',
     ))
 

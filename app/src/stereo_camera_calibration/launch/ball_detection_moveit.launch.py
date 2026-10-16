@@ -34,10 +34,10 @@ def generate_launch_description():
         DeclareLaunchArgument("camera_index", default_value="2"),
         DeclareLaunchArgument("calibration_file", default_value=str(root / "app/calibration/stereo_calib_standard.xml")),
         DeclareLaunchArgument("model", default_value=str(weights)),
-        DeclareLaunchArgument("confidence", default_value="0.50"),
+        DeclareLaunchArgument("confidence", default_value="0.75"),
         DeclareLaunchArgument("minimum_depth", default_value="0.06"),
         DeclareLaunchArgument("num_disparities", default_value="224"),
-        DeclareLaunchArgument("base_vertical_offset", default_value="0.01"),
+        DeclareLaunchArgument("base_vertical_offset", default_value="0.0"),
     ):
         description.add_action(argument)
     description.add_action(SetLaunchConfiguration("allow_trajectory_execution", "false"))

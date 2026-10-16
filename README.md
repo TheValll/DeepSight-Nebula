@@ -970,9 +970,10 @@ FT means fine-tuned on my ping-pong ball dataset.
 
 #### Model selection with PEI
 
-I built a PEI score to compare detection quality, confidence and resource usage.
-Once my limits are met, I prefer saving memory over finding a few more balls.
-RAM and GPU memory have the same weight. Keeping CPU resources available matters more than GPU resources.
+I use a Performance Efficiency Index (PEI) to choose a model for the robot.
+It combines detection quality, confidence, processing time and resource usage.
+I first check minimum requirements, then choose the model with the highest PEI among those that meet them.
+RAM and GPU memory have the same weight. CPU usage matters more than GPU usage.
 
 | Criterion | Weight |
 |:---|---:|
@@ -985,7 +986,9 @@ RAM and GPU memory have the same weight. Keeping CPU resources available matters
 | Confidence of correct detections | 5% |
 
 F1 includes missed balls and false detections, including the no-ball videos.
-Detection is not counted a second time. Confidence only counts on correct detections.
+Confidence is measured only on correct detections.
+Lower processing time and memory usage score better, relative to the 18 tested versions.
+CPU and GPU scores improve as usage decreases.
 
 I also chose acceptable limits:
 
@@ -1000,7 +1003,7 @@ p95 means 95% of images are processed within this time.
 YOLO11n FT, YOLO26n FT and YOLO26s FT meet the mandatory limits in these tests.
 These limits use both colors together, with no-ball errors included in precision.
 
-I recalculated PEI for all 18 versions. Scores range from 0 to 1; higher is better.
+Scores range from 0 to 1; higher is better.
 Models in bold meet my limits. The other models stay in the table for comparison.
 
 | Model | PEI |
@@ -1023,6 +1026,10 @@ Models in bold meet my limits. The other models stay in the table for comparison
 | YOLO26m | 0.494 |
 | YOLO11m | 0.432 |
 | YOLOE-26m | 0.405 |
+
+I selected **YOLO26n FT**. It has the highest PEI among the models that meet my requirements.
+YOLOE-26n FT scores slightly higher, but its overall precision is below 96%.
+These scores describe this benchmark on the RTX 5080. They still need checking on an embedded computer.
 
 **Next steps.**
 - Improve performance and reduce processing delay.

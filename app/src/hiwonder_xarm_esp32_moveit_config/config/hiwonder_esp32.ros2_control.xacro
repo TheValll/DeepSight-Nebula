@@ -7,6 +7,12 @@
       name="initial_positions"
       value="${xacro.load_yaml(initial_positions_file)['initial_positions']}"/>
     <xacro:property name="radians_per_raw" value="${4.1887902047863905 / 1000.0}"/>
+    <!-- Servos turn more than the nominal 240 deg per 1000 raw units. Scales measured
+         on 2026-10-16 by moving one joint and measuring the camera rotation on a fixed
+         checkerboard. The base and wrist rotation keep the nominal value. -->
+    <xacro:property name="shoulder_radians_per_raw" value="${radians_per_raw * 1.070}"/>
+    <xacro:property name="elbow_radians_per_raw" value="${radians_per_raw * 1.056}"/>
+    <xacro:property name="wrist_radians_per_raw" value="${radians_per_raw * 1.045}"/>
     <xacro:property name="gripper_units_per_raw" value="${0.03 / 556.0}"/>
 
     <ros2_control name="${name}" type="system">
@@ -22,12 +28,17 @@
           <!-- CH340 DTR/RTS can reset the ESP32 when the serial port opens. -->
           <param name="startup_delay_ms">2000</param>
           <param name="movement_duration_ms">40</param>
+          <!-- A lost servo reply keeps the last position for up to 5 cycles. -->
+          <param name="max_consecutive_read_failures">5</param>
           <!-- read_only suppresses every hardware output in HiwonderSystem. -->
           <param name="read_only">${read_only}</param>
         </xacro:unless>
       </hardware>
 
-      <!-- Raw ranges include a 20-unit margin from the measured positions. -->
+      <!-- Raw ranges include a 20-unit margin from the measured positions. The plugin
+           clamps commands to them. The min and max below extend them by 5 raw units so
+           a servo settling just past its commanded limit does not stop the controllers;
+           MoveIt plans 10 units inside them (joint_limits.yaml). -->
       <joint name="limb1_to_base_link_joint">
         <param name="servo_id">6</param>
         <param name="raw_reference">501</param>
@@ -38,8 +49,8 @@
         <param name="raw_max">980</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.999726</param>
-          <param name="max">2.021513</param>
+          <param name="min">-2.020670</param>
+          <param name="max">2.042456</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb1_to_base_link_joint']}</param>
@@ -51,14 +62,14 @@
         <param name="servo_id">5</param>
         <param name="raw_reference">856</param>
         <param name="ros_reference">1.550816</param>
-        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="units_per_raw">${shoulder_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">119</param>
         <param name="raw_max">849</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.53632</param>
-          <param name="max">1.52149</param>
+          <param name="min">-1.774832</param>
+          <param name="max">1.541852</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb2_to_limb1_joint']}</param>
@@ -70,14 +81,14 @@
         <param name="servo_id">4</param>
         <param name="raw_reference">863</param>
         <param name="ros_reference">1.550816</param>
-        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="units_per_raw">${elbow_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">20</param>
         <param name="raw_max">980</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.98033</param>
-          <param name="max">2.04090</param>
+          <param name="min">-2.094</param>
+          <param name="max">2.090466</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb3_to_limb2_joint']}</param>
@@ -89,14 +100,14 @@
         <param name="servo_id">3</param>
         <param name="raw_reference">503</param>
         <param name="ros_reference">0.071130</param>
-        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="units_per_raw">${wrist_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">61</param>
         <param name="raw_max">858</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.780316</param>
-          <param name="max">1.558151</param>
+          <param name="min">-1.885517</param>
+          <param name="max">1.646953</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb4_to_limb3_joint']}</param>
@@ -114,8 +125,8 @@
         <param name="raw_max">840</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.562524</param>
-          <param name="max">1.365440</param>
+          <param name="min">-1.583468</param>
+          <param name="max">1.386384</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb5_to_limb4_joint']}</param>
@@ -132,8 +143,8 @@
         <param name="raw_min">270</param>
         <param name="raw_max">786</param>
         <param name="movement_duration_ms">1000</param>
-        <!-- Slow closure only; opening and arm movements keep their durations. -->
-        <param name="closing_movement_duration_ms">3000</param>
+        <!-- Closing duration is independent of opening and arm movements. -->
+        <param name="closing_movement_duration_ms">500</param>
         <param name="hardware_io_enabled">${gripper_hardware_io_enabled}</param>
         <command_interface name="position">
           <param name="min">-0.013921</param>
