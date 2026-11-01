@@ -1,0 +1,3 @@
+# Count only Rust files in GitHub language statistics.
+* linguist-detectable=false
+*.rs linguist-detectable=true
