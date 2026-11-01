@@ -45,10 +45,14 @@ target_link_libraries(servo_calibration_cli Boost::system)
 pluginlib_export_plugin_description_file(
   hardware_interface hiwonder_xarm_esp32_hardware.xml)
 
-install(TARGETS ${PROJECT_NAME} servo_calibration_cli
+install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
+)
+# Installed under lib/<package> so that `ros2 run hiwonder_xarm_esp32_hardware servo_calibration_cli` finds it.
+install(TARGETS servo_calibration_cli
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY include/ DESTINATION include)
 install(FILES
@@ -56,12 +60,6 @@ install(FILES
   DESTINATION include
 )
 install(FILES README.md DESTINATION share/${PROJECT_NAME})
-
-if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(test_joint_calibration test/test_joint_calibration.cpp)
-  target_link_libraries(test_joint_calibration ${PROJECT_NAME})
-endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})

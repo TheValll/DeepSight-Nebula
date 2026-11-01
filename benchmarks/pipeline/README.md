@@ -90,8 +90,11 @@ Résultats bruts :
 - `after_core_optimizations_2026-10-01.json`
 - `after_usb_buffer_fix_2026-10-01.csv`
 - `after_usb_buffer_fix_2026-10-01.json`
+- `camera_new_usb_port_2026-10-01.csv`
+- `camera_new_usb_port_2026-10-01.json`
 
-Relancer la même mesure après chaque optimisation :
+Relancer la même mesure après chaque optimisation, pendant qu'un launch de perception tourne
+(`perception_rviz`, `ball_detection_moveit` ou `ball_pick_hardware`, voir le README principal) :
 
 ```bash
 cd /home/valentin/DeepSight-Nebula/app

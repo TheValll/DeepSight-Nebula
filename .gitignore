@@ -1,29 +1,16 @@
-yolov8n.pt
+# Python environment and caches
 .venv/
-yolov8x.pt
-yolov8x.engine
-yolo11n.pt
-yolo11s.pt
-yolo11m.pt
+__pycache__/
+.pytest_cache/
+
+# Editors
 .vs
-__pycache__
+.vscode
+
+# ROS 2 / colcon workspace outputs
 log
 build
 install
-.vscode
-fusion360_xarm32.zip
-images
-
-# Local tennis-ball training captures (potentially large)
-/datasets/tennis_ball/videos/
-/datasets/tennis_ball/frames/
-/datasets/ping_pong_ball/videos/
-/datasets/ping_pong_ball/frames/
-/datasets/ping_pong_ball/annotations/
-/datasets/ping_pong_ball/prepared/
-
-# Downloaded benchmark model assets
-/benchmarks/yolo/models/
 
 # C and C++ compilation artifacts
 *.o
@@ -42,17 +29,41 @@ CMakeFiles/
 cmake_install.cmake
 Makefile
 
-# Legacy utility executables (compile new binaries inside build/)
-benchmark_micro_python_firmware
-test_hiwonder
-test_hiwonder_xarm_rust_driver
-test_hiwonder_xarm_rust_driver_hardware
+# Videos and raw recordings (README illustrations live in schemas/ and stay tracked)
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.webm
+*.bag
+*.mcap
+
+# Raw camera captures (stereo calibration checkerboards, dataset frames, ...)
+images
+
+# Model weights and exports
+*.pt
+*.engine
+*.onnx
 /mobileclip2_b.ts
 
+# Local datasets (large)
+/datasets/ping_pong_ball/videos/
+/datasets/ping_pong_ball/frames/
+/datasets/ping_pong_ball/annotations/
+/datasets/ping_pong_ball/prepared/
+
+# Downloaded benchmark model assets
+/benchmarks/yolo/models/
+
 # Local fine-tuning checkpoints and logs (large files)
+# Runtime launches load benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt
 /benchmarks/finetuning/
 # Keep benchmark CSVs; ignore intermediate reports and predictions.
 /benchmarks/yolo/results/**
 !/benchmarks/yolo/results/**/
 !/benchmarks/yolo/results/**/*.csv
 /benchmarks/yolo/videos/
+
+# CAD archive
+fusion360_xarm32.zip

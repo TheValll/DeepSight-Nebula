@@ -5,7 +5,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
@@ -14,9 +13,6 @@ find_package(sensor_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Threads REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
 include_directories(include)
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -46,12 +42,6 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
-  scripts/ball_plan_preview_node.py
-  DESTINATION lib/${PROJECT_NAME}
-  RENAME ball_plan_preview_node
-)
-
-install(PROGRAMS
   scripts/ball_pick_node.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME ball_pick_node
@@ -64,6 +54,7 @@ install(PROGRAMS
 )
 
 install(DIRECTORY
+  config
   launch
   rviz
   DESTINATION share/${PROJECT_NAME}
@@ -77,19 +68,5 @@ target_link_libraries(rectification_exe
   ${OpenCV_LIBS}
   Threads::Threads
 )
-
-if(BUILD_TESTING)
-  find_package(ament_cmake_pytest REQUIRED)
-  ament_add_pytest_test(test_ball_pick_return test/test_ball_pick_return.py)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
 ament_package()

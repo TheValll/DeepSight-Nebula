@@ -11,10 +11,32 @@ from geometry_msgs.msg import PointStamped, PoseStamped, TransformStamped
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from tf2_geometry_msgs import do_transform_point
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
+
+
+def horizontal_center_correction(surface, camera_origin, distance):
+    """Move a detected surface point horizontally away from the camera.
+
+    The stereo median lies on the visible ball surface, in front of the centre.
+    The point moves by `distance` along the horizontal camera -> ball direction
+    and keeps its height. Zero leaves the point unchanged.
+    """
+    surface = np.asarray(surface, dtype=float)
+    camera_origin = np.asarray(camera_origin, dtype=float)
+    if surface.shape != (3,) or not np.all(np.isfinite(surface)):
+        raise ValueError('Surface must be a finite 3D point')
+    if distance == 0.0:
+        return surface.copy()
+    horizontal_ray = surface - camera_origin
+    horizontal_ray[2] = 0.0
+    norm = np.linalg.norm(horizontal_ray)
+    if norm <= 1e-9:
+        raise ValueError('Ball is vertically below the camera: no horizontal direction')
+    return surface + distance * horizontal_ray / norm
 
 
 class BallGoalPreviewNode(Node):
@@ -23,26 +45,25 @@ class BallGoalPreviewNode(Node):
     def __init__(self) -> None:
         super().__init__("ball_goal_preview_node")
 
-        self.target_frame = str(self.declare_parameter("target_frame", "base_link").value)
+        # Tuning parameters have no code default: see config/pipeline.yaml.
+        self.target_frame = self.required("target_frame", Parameter.Type.STRING)
+        self.surface_to_center_distance = self.required(
+            "surface_to_center_distance", Parameter.Type.DOUBLE)
+        self.center_offset_z = self.required("center_offset_z", Parameter.Type.DOUBLE)
+        if self.surface_to_center_distance < 0:
+            raise ValueError("surface_to_center_distance must be nonnegative")
+        if ((self.surface_to_center_distance != 0.0 or self.center_offset_z != 0.0)
+                and self.target_frame != "base_link"):
+            raise ValueError("Ball centre corrections require target_frame=base_link")
+        sample_count = self.required("sample_count", Parameter.Type.INTEGER)
+        self.sample_max_age = Duration(
+            seconds=self.required("sample_max_age", Parameter.Type.DOUBLE))
         self.show_marker_labels = bool(
             self.declare_parameter("show_marker_labels", True).value
-        )
-        # Optional empirical base-frame offset; disabled until calibrated.
-        # This is not a general sphere/depth fit.
-        self.center_offset_z = float(
-            self.declare_parameter("center_offset_z", 0.0).value
-        )
-        if not np.isfinite(self.center_offset_z):
-            raise ValueError("center_offset_z must be finite")
-        if self.center_offset_z != 0.0 and self.target_frame != "base_link":
-            raise ValueError("Nonzero center_offset_z requires target_frame=base_link")
-        self.allow_latest_transform = bool(
-            self.declare_parameter("allow_latest_transform", False).value
         )
         self.publish_metrics = bool(
             self.declare_parameter("publish_metrics", False).value
         )
-        sample_count = int(self.declare_parameter("sample_count", 10).value)
         self.positions = deque(maxlen=max(1, sample_count))
         self.position_times = deque(maxlen=max(1, sample_count))
         self.last_log_time = self.get_clock().now() - Duration(seconds=10.0)
@@ -73,6 +94,14 @@ class BallGoalPreviewNode(Node):
             "planning or sending robot commands"
         )
 
+    def required(self, name: str, kind: Parameter.Type):
+        value = self.declare_parameter(name, kind).value
+        if value is None:
+            raise ValueError(f"Missing ROS parameter {name!r} (see config/pipeline.yaml)")
+        if isinstance(value, float) and not np.isfinite(value):
+            raise ValueError(f"ROS parameter {name!r} must be finite")
+        return value
+
     def process_markers(self, message: MarkerArray) -> None:
         callback_start = time.perf_counter()
         balls = [
@@ -87,20 +116,15 @@ class BallGoalPreviewNode(Node):
         ball = min(balls, key=lambda marker: marker.pose.position.z)
         point = PointStamped()
         point.header = ball.header
-        point.point = ball.pose.position
+        surface = (ball.pose.position.x, ball.pose.position.y, ball.pose.position.z)
+        point.point.x, point.point.y, point.point.z = map(float, surface)
 
-        transform_time = (
-            rclpy.time.Time()
-            if self.allow_latest_transform
-            else rclpy.time.Time.from_msg(point.header.stamp)
-        )
         try:
-            # Latest TF is allowed only by the static mock-hardware launch. Real
-            # motion must use the transform matching the image timestamp.
+            # Use the arm pose at the image timestamp, not the latest one.
             transform = self.tf_buffer.lookup_transform(
                 self.target_frame,
                 point.header.frame_id,
-                transform_time,
+                rclpy.time.Time.from_msg(point.header.stamp),
                 timeout=Duration(seconds=0.1),
             )
             transformed = do_transform_point(point, transform)
@@ -116,12 +140,25 @@ class BallGoalPreviewNode(Node):
             [transformed.point.x, transformed.point.y, transformed.point.z],
             dtype=float,
         )
+        camera = transform.transform.translation
+        try:
+            position = horizontal_center_correction(
+                position, (camera.x, camera.y, camera.z), self.surface_to_center_distance)
+        except ValueError as error:
+            self.get_logger().warning(str(error), throttle_duration_sec=2.0)
+            return
         position[2] += self.center_offset_z
+        now = self.get_clock().now()
+        # Drop samples that are too old or from a ball that jumped elsewhere,
+        # so the median never mixes a stale detection with the current one.
+        while self.position_times and now - self.position_times[0] > self.sample_max_age:
+            self.positions.popleft()
+            self.position_times.popleft()
         if self.positions and np.linalg.norm(position - self.positions[-1]) > 0.10:
             self.positions.clear()
             self.position_times.clear()
         self.positions.append(position)
-        self.position_times.append(self.get_clock().now())
+        self.position_times.append(now)
         filtered = np.median(np.stack(self.positions), axis=0)
 
         stamp = self.get_clock().now().to_msg()
@@ -231,8 +268,10 @@ class BallGoalPreviewNode(Node):
         label.color.b = 1.0
         label.color.a = 1.0
         label.text = (
-            f"goal x={goal.pose.position.x:.3f} "
-            f"y={goal.pose.position.y:.3f} z={goal.pose.position.z:.3f}"
+            f"Base XY: {100 * np.hypot(goal.pose.position.x, goal.pose.position.y):.1f} cm\n"
+            f"X: {100 * goal.pose.position.x:.1f}  "
+            f"Y: {100 * goal.pose.position.y:.1f}  "
+            f"Z: {100 * goal.pose.position.z:.1f} cm"
         )
         label.lifetime = lifetime
         markers.markers.append(label)

@@ -7,6 +7,11 @@ moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControll
 trajectory_execution:
   allowed_execution_duration_scaling: 1.2
   allowed_goal_duration_margin: 2.0
+  # MoveIt refuses to execute (CONTROL_FAILED, -4) when the measured start
+  # state differs from the planned one by more than this. The default 0.01 rad
+  # is about 2 raw servo units: encoder jitter and the wrist sagging near its
+  # limit in `default` exceed it. 0.03 rad is about 7 raw units.
+  allowed_start_tolerance: 0.03
 
 moveit_simple_controller_manager:
   controller_names:

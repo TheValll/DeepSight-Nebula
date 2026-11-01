@@ -6,11 +6,12 @@
 
 ## Table of Contents / Sommaire
 
-- [Why the name _DeepSight-Nebula_?](#-why-the-name-deepsight-nebula)
-- [Goals of DeepSight-Nebula](#-goals-of-deepsight-nebula)
-- [Purpose of this README](#-purpose-of-this-readme)
-- [Environment Setup](#-environment-setup)
-- [Logbook](#-logbook)
+- [Why the name _DeepSight-Nebula_?](#why-the-name-deepsight-nebula)
+- [Goals of DeepSight-Nebula](#goals-of-deepsight-nebula)
+- [Purpose of this README](#purpose-of-this-readme)
+- [Environment Setup](#environment-setup)
+- [Commands](#commands)
+- [Logbook](#logbook)
 
 ---
 
@@ -70,11 +71,9 @@ I will use **Gemini** to help me rephrase and improve this document throughout t
 
 ## Environment Setup
 
-This project was developed on an **Ubuntu Linux** container in a **Fedora Linux** environment.
+This project was developed on an **Ubuntu Linux** container in a **Fedora Linux** environment, with **ROS 2 Jazzy**.
 
-### Installation & Execution
-
-#### Python Environment
+### Python environment
 
 From the project root, create one virtual environment for the complete project.
 These PyTorch packages are for my RTX 5080 and may differ for another GPU:
@@ -101,139 +100,159 @@ Check the environment:
 .venv/bin/python -c "import cv2, numpy, psutil, pynvml, torch, ultralytics; print('CUDA:', torch.cuda.is_available())"
 ```
 
-#### ROS 2 Packages Documentation :
-
-##### 1. Hiwonder xArm ESP32 URDF Description
-
-This folder contains the URDF description of the Hiwonder xArm ESP32 robot for ROS 2 Humble, including Gazebo models.
-
-Launch the visualization:
+### Build the ROS 2 workspace
 
 ```bash
-ros2 launch hiwonder_xarm_esp32_description display.launch.xml
+cd app
+source /opt/ros/jazzy/setup.bash
+colcon build --symlink-install
 ```
 
-##### 2. Stereo Camera Calibration
+| Package | Content |
+|---|---|
+| `hiwonder_xarm_esp32_description` | URDF: arm, gripper, printed stereo camera mount |
+| `hiwonder_xarm_esp32_hardware` | `ros2_control` plugin for the Rust firmware, servo calibration CLI |
+| `hiwonder_xarm_esp32_moveit_config` | MoveIt 2 configuration, controllers, collision floor |
+| `stereo_camera_calibration` | Stereo calibration, depth, YOLO detection, ball goal, pick node |
 
-This package contains an application to calibrate a stereo camera.
+The Rust firmware must be flashed on the ESP32 first:
+[firmware user guide](rust_firmware/specs/DeepSight-Nebula_Rust_Firmware_User_Guide.md).
 
-###### Prerequisites :
+---
 
-- A stereo camera connected via USB.
-- A 9x6 Chessboard with 25mm squares.
+## Commands
 
-###### Camera anti-flicker (Linux)
-
-In countries using a 50 Hz electrical grid, such as France, set the camera anti-flicker frequency before recording
-datasets or running benchmarks. A direct USB connection is recommended:
+Every command runs **from the project root**, in a terminal prepared with:
 
 ```bash
-v4l2-ctl --list-devices
-v4l2-ctl -d /dev/video0 --set-ctrl=power_line_frequency=1
-v4l2-ctl -d /dev/video0 --get-ctrl=power_line_frequency
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+source .venv/bin/activate   # needed by every launch that runs YOLO
 ```
 
-The camera device may differ from `/dev/video0`, and the setting may need to be reapplied after reconnecting it.
+| Goal | Robot | Command |
+|---|---|---|
+| View the URDF | none | `ros2 launch hiwonder_xarm_esp32_description display.launch.xml` |
+| Detection in RViz | none | `ros2 launch stereo_camera_calibration perception_rviz.launch.py` |
+| Detection in RViz + MoveIt | real, read-only | `ros2 launch stereo_camera_calibration ball_detection_moveit.launch.py` |
+| MoveIt only | mock | `ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py` |
+| MoveIt only | real, moves | `ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py` |
+| Ball pick | real, moves | `ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py` |
 
-Configuration: If your chessboard dimensions differ, please modify the configuration in:
+### Detection in RViz, without the robot
 
 ```bash
-app/src/stereo_camera_calibration/include/stereo_camera_calibration/calibration_node.hpp
+ros2 launch stereo_camera_calibration perception_rviz.launch.py
 ```
 
-Run the calibration node:
+Shows the robot model, the annotated YOLO image, the depth image, the 3D detection and the ball goal.
+The arm pose comes from the joint sliders (initialised to the `default` pose), so the goal position in `base_link`
+is only correct when the sliders match the physical arm.
+
+### Detection in RViz with MoveIt, real robot in read-only mode
+
+```bash
+ros2 launch stereo_camera_calibration ball_detection_moveit.launch.py
+```
+
+The robot only publishes its measured joint positions: the driver blocks every servo output and no arm or
+gripper controller is loaded. The ball goal shown in RViz is the target the pick node would use.
+
+### Ball pick
+
+Terminal 1, start the robot, the perception and the pick node:
+
+```bash
+ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py
+```
+
+Nothing moves at startup. Terminal 2, once a ball goal is visible in RViz:
+
+```bash
+ros2 service call /pick_ball std_srvs/srv/Trigger           # open, reach, close, return to default
+ros2 service call /pick_status std_srvs/srv/Trigger         # final result (JSON)
+```
+
+`/pick_ball` only answers that the pick was accepted; `/pick_status` gives the final state.
+"Pince bloquée sur un objet" means the gripper stopped before full closure: the gripper also stops there when it
+closes empty, so check the ball visually.
+
+Other services of the pick node:
+
+```bash
+ros2 service call /approach_ball std_srvs/srv/Trigger       # reach with the gripper open, no return
+ros2 service call /prepare_pick_trial std_srvs/srv/Trigger  # move the arm to default only
+```
+
+Stop with `Ctrl+C`. `move_group` sometimes survives it; check and kill it before relaunching:
+
+```bash
+pgrep -fa move_group && pkill -9 -f moveit_ros_move_group/move_group
+```
+
+### Settings
+
+All perception and pick settings are in
+[`app/src/stereo_camera_calibration/config/pipeline.yaml`](app/src/stereo_camera_calibration/config/pipeline.yaml),
+shared by the three `stereo_camera_calibration` launches: depth range, YOLO confidence and class, goal filter,
+MoveIt tolerance, gripper positions and grasp offsets. The nodes have no code default for these values, so a
+missing setting stops the node at startup.
+
+The launches only pass the paths, which can be overridden as launch arguments (`name:=value`):
+
+| Argument | Default |
+|---|---|
+| `camera_device` | `/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0` |
+| `calibration_file` | `app/calibration/stereo_calib_standard.xml` |
+| `model` | `benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt` (YOLO26n FT, class `ping_pong_ball`) |
+| `serial_port` | `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` |
+| `use_rviz` | `true` (`ball_pick_hardware` and `hardware.launch.py`) |
+
+The `by-id` paths do not change with the USB enumeration order, unlike `/dev/video2` or `/dev/ttyUSB0`.
+The YOLO weights are not tracked by git; the YOLO node refuses to start if the file is missing.
+Servo calibration (references, scales, limits) is described in the
+[hardware README](app/src/hiwonder_xarm_esp32_hardware/README.md).
+
+### Tools
+
+**Stereo calibration.** Requires a 9x6 chessboard with 25 mm squares (8x5 inner corners); change it in
+`app/src/stereo_camera_calibration/include/stereo_camera_calibration/calibration_node.hpp` if needed.
+Run from the `app` folder:
 
 ```bash
 ros2 run stereo_camera_calibration calibration_exe
 ```
 
-Validate the stereo rectification using the saved calibration:
+The tool opens camera index 0 (MJPEG 2560x720, 60 FPS). Press **S** to capture chessboard poses; once enough
+are captured, it writes `calibration/stereo_calib.xml` with the images. The pipeline uses
+`app/calibration/stereo_calib_standard.xml` (5 distortion coefficients, RMS 0.36 px); `stereo_calib.xml` is the
+older 14-coefficient calibration, kept for comparison.
+
+**Camera anti-flicker.** With a 50 Hz grid (France), set it before recording or benchmarking; reapply it after
+reconnecting the camera:
 
 ```bash
-ros2 run stereo_camera_calibration rectification_exe
+v4l2-ctl --list-devices
+v4l2-ctl -d /dev/video0 --set-ctrl=power_line_frequency=1
 ```
+
+**Servo calibration CLI.** Reads raw servo positions, or moves one servo when `--execute` is given. Stop every
+launch first: it needs the serial port.
 
 ```bash
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-source ../.venv/bin/activate
-ros2 run stereo_camera_calibration yolo_detection_node
+ros2 run hiwonder_xarm_esp32_hardware servo_calibration_cli read --id 3 --count 5 \
+  --port /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
 ```
 
-By default, the YOLO node only displays COCO class `32` (`sports ball`), which includes ping-pong balls. Override the
-`classes` ROS 2 parameter to select one or more classes:
+**Real robot in RViz without MoveIt (read-only).** Joint positions only, used for servo calibration:
 
 ```bash
-# Only sports balls (default)
-ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[32]"
-
-# Sports balls and bottles
-ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[32, 39]"
-
-# Disable class filtering
-ros2 run stereo_camera_calibration yolo_detection_node --ros-args -p classes:="[]"
+ros2 launch hiwonder_xarm_esp32_moveit_config calibration_rviz.launch.py
 ```
 
-Launch the complete perception visualization (robot model, TF tree, annotated YOLO image, metric depth image,
-colored stereo point cloud, and 3D detection markers) from the `app` folder with the Python environment active:
-
-```bash
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-source ../.venv/bin/activate
-ros2 launch stereo_camera_calibration perception_rviz.launch.py
-```
-
-The launch uses `yoloe-26m-seg.pt`, the `ping pong ball` prompt, confidence `0.50`, and a 1280 image by default.
-The model, prompt, confidence, and camera index can be overridden with launch arguments, for example:
-
-```bash
-ros2 launch stereo_camera_calibration perception_rviz.launch.py camera_index:=2
-```
-
-Show YOLO26n FT detections in MoveIt, without automatic planning or physical movements.
-Run from the project root:
-
-```bash
-source /opt/ros/jazzy/setup.bash
-source app/install/setup.bash
-source .venv/bin/activate
-ros2 launch stereo_camera_calibration ball_detection_moveit.launch.py \
-  camera_index:=2 serial_port:=/dev/ttyUSB0
-```
-
-This uses the fine-tuned ball class, confidence 0.50 and image size 1280, without a prompt.
-MoveIt reads the real robot positions in read-only mode. No motor commands are sent.
-RViz shows the camera detections and is limited to 30 FPS.
-
-###### How it works
-
-1. The script uses VideoCapture (default index: 0) in the capture_frames function. The stereo stream is configured
-   as MJPEG at 2560x720 and 60 FPS, producing two 1280x720 images.
-   Note: You may need to change this index in the code if your camera is on a different port (e.g., /dev/video0).
-2. The application will ask you to press **'S'** to take pictures of your chessboard in different positions.
-3. Once enough images are captured, it automatically calculates the calibration matrices.
-4. A **calibration folder** will be created containing the captured images and the resulting XML calibration file.
-
-##### 3. MoveIt2 Configuration
-
-This package contains the MoveIt2 configuration of the Hiwonder xArm ESP32.
-
-Launch MoveIt with RViz (planning + execution on the mock hardware):
-
-```bash
-ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py
-```
-
-Launch MoveIt with RViz on the real robot from the project root:
-
-```bash
-cd /home/valentin/DeepSight-Nebula
-source /opt/ros/jazzy/setup.bash
-source app/install/setup.bash
-ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py \
-  serial_port:=/dev/ttyUSB0 use_rviz:=true
-```
+**Pipeline latency benchmark** and **ball dataset / fine-tuning tools**: see
+[benchmarks/pipeline/README.md](benchmarks/pipeline/README.md) and
+[app/utils/vision/README.md](app/utils/vision/README.md).
 
 ---
 
@@ -916,7 +935,6 @@ The dataset contains 3,364 ball boxes and 301 images without a ball.
 
 I split the images into three groups: training, validation and test.
 Images from the same video stay in the same group.
-84.86% 	
 | Split | Images | Videos |
 |:---|---:|---:|
 | Training | 2,401 | 16 |

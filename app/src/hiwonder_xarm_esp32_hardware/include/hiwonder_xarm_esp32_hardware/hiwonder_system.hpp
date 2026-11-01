@@ -54,7 +54,7 @@ public:
   hardware_interface::return_type write(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-  // Kept public to unit-test the no-output policy without instantiating a serial driver.
+  // Pure policy helpers, public so they can be tested without a serial port.
   static bool hardware_io_permitted(bool read_only, bool joint_hardware_io_enabled);
   // A lost servo reply keeps the last position; activation reads stay strict.
   static bool read_failure_tolerated(

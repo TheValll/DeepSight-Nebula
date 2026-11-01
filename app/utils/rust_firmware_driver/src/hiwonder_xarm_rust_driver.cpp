@@ -1,5 +1,7 @@
 #include "hiwonder_xarm_rust_driver.hpp"
 
+#include <optional>
+
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
@@ -161,21 +163,27 @@ std::vector<std::uint8_t> HiwonderRustDriver::query(
 
     const auto request = build_frame(servo_id, command);
     boost::asio::write(serial_, boost::asio::buffer(request));
-    const auto response = read_frame(std::chrono::steady_clock::now() + timeout);
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
 
-    if (response[2] != servo_id) {
-        throw std::runtime_error("response servo ID does not match request");
+    // A late reply to a previous request (another servo or command) or a
+    // corrupted frame is skipped: keep reading until the expected reply or
+    // the deadline, instead of failing the whole read.
+    while (true) {
+        const auto response = read_frame(deadline);
+        if (!response) {
+            throw std::runtime_error("servo response timeout");
+        }
+        if ((*response)[2] != servo_id || (*response)[4] != command) {
+            continue;
+        }
+        if (response->size() != expected_parameter_count + 6U) {
+            throw std::runtime_error("unexpected response parameter count");
+        }
+        return {response->begin() + 5, response->end() - 1};
     }
-    if (response[4] != command) {
-        throw std::runtime_error("response command does not match request");
-    }
-    if (response.size() != expected_parameter_count + 6U) {
-        throw std::runtime_error("unexpected response parameter count");
-    }
-    return {response.begin() + 5, response.end() - 1};
 }
 
-std::vector<std::uint8_t> HiwonderRustDriver::read_frame(
+std::optional<std::vector<std::uint8_t>> HiwonderRustDriver::read_frame(
     std::chrono::steady_clock::time_point deadline) {
     std::vector<std::uint8_t> frame;
     frame.reserve(10);
@@ -234,13 +242,13 @@ std::vector<std::uint8_t> HiwonderRustDriver::read_frame(
             continue;
         }
         if (frame.size() >= 4 && frame.size() == frame[3] + 3U) {
-            if (!is_valid_frame(frame)) {
-                throw std::runtime_error("invalid servo response checksum");
+            if (is_valid_frame(frame)) {
+                return frame;
             }
-            return frame;
+            frame.clear();  // Bad checksum: resynchronise on the next header.
         }
     }
-    throw std::runtime_error("servo response timeout");
+    return std::nullopt;
 }
 
 void HiwonderRustDriver::ensure_open() const {
@@ -335,19 +343,4 @@ void HiwonderRustDriver::load(std::uint8_t servo_id) {
 
 void HiwonderRustDriver::unload(std::uint8_t servo_id) {
     send_command(servo_id, SERVO_LOAD_OR_UNLOAD_WRITE, {0});
-}
-
-void HiwonderRustDriver::ready_position() {
-    move(1, 500, 1000);
-    move(2, 500, 1000);
-    move(3, 200, 1000);
-    move(4, 750, 1000);
-    move(5, 500, 1000);
-    move(6, 500, 1000);
-}
-
-void HiwonderRustDriver::default_position() {
-    for (std::uint8_t servo_id = 1; servo_id <= 6; ++servo_id) {
-        move(servo_id, 500, 1000);
-    }
 }

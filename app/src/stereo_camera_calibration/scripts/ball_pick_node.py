@@ -3,27 +3,28 @@
 """Execute one explicit ball-pick sequence on the physical robot."""
 
 from copy import deepcopy
-from math import ceil, isfinite, sqrt
+import json
+from math import isfinite, sqrt
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import rclpy
 from action_msgs.msg import GoalStatus
 from ament_index_python.packages import get_package_share_directory
-from control_msgs.action import FollowJointTrajectory, GripperCommand
-from geometry_msgs.msg import Pose, PoseStamped, Vector3
+from control_msgs.action import GripperCommand
+from geometry_msgs.msg import Pose, PoseStamped
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import (
     Constraints, DisplayTrajectory, JointConstraint, MoveItErrorCodes, PositionConstraint,
 )
-from moveit_msgs.srv import GetPositionFK, GetPositionIK
+from moveit_msgs.srv import GetPositionIK
 from rclpy.action import ActionClient
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from shape_msgs.msg import SolidPrimitive
 from sensor_msgs.msg import JointState
 from std_srvs.srv import Trigger
-from trajectory_msgs.msg import JointTrajectoryPoint
 from visualization_msgs.msg import Marker, MarkerArray
 
 
@@ -58,92 +59,28 @@ class BallPickNode(Node):
             self.default_joint_positions = load_joint_state(
                 config_path / 'config' / 'hiwonder_esp32.srdf', self.group_name, 'default'
             )
-        self.base_frame = str(self.declare_parameter('base_frame', 'base_link').value)
-        self.tip_link = str(
-            self.declare_parameter('tip_link', 'gripper_tcp_link').value
-        )
-        self.position_tolerance = float(
-            self.declare_parameter('position_tolerance', 0.01).value
-        )
-        self.goal_max_age = float(self.declare_parameter('goal_max_age', 1.0).value)
-        self.max_target_distance = float(
-            self.declare_parameter('max_target_distance', 0.60).value
-        )
-        self.planning_attempts = int(
-            self.declare_parameter('planning_attempts', 2).value
-        )
-        self.allowed_planning_time = float(
-            self.declare_parameter('allowed_planning_time', 1.0).value
-        )
-        self.velocity_scaling = float(
-            self.declare_parameter('velocity_scaling', 0.35).value
-        )
-        self.acceleration_scaling = float(
-            self.declare_parameter('acceleration_scaling', 0.05).value
-        )
-        self.gripper_open_position = float(
-            self.declare_parameter('gripper_open_position', 0.013651).value
-        )
-        self.gripper_closed_position = float(
-            self.declare_parameter('gripper_closed_position', -0.013651).value
-        )
-        self.gripper_max_effort = float(
-            self.declare_parameter('gripper_max_effort', 10.0).value
-        )
-        # The camera measures the visible ball surface, which faces the robot.
-        # Move the target horizontally away from the base toward the ball centre.
-        self.grasp_radial_offset = float(
-            self.declare_parameter('grasp_radial_offset', 0.0).value
-        )
-        # Horizontal shift to the arm's left, seen from the base toward the ball.
-        self.grasp_lateral_offset = float(
-            self.declare_parameter('grasp_lateral_offset', 0.0).value
-        )
-        self.tcp_offset = Vector3(
-            x=float(self.declare_parameter('tcp_offset_x', 0.0).value),
-            y=float(self.declare_parameter('tcp_offset_y', 0.0).value),
-            z=float(self.declare_parameter('tcp_offset_z', 0.0).value),
-        )
+        # Tuning parameters have no code default: they come from
+        # config/pipeline.yaml so that every launch uses the same values.
+        self.base_frame = self.required('base_frame', Parameter.Type.STRING)
+        self.tip_link = self.required('tip_link', Parameter.Type.STRING)
+        self.position_tolerance = self.required('position_tolerance', Parameter.Type.DOUBLE)
+        self.goal_max_age = self.required('goal_max_age', Parameter.Type.DOUBLE)
+        self.max_target_distance = self.required('max_target_distance', Parameter.Type.DOUBLE)
+        self.planning_attempts = self.required('planning_attempts', Parameter.Type.INTEGER)
+        self.allowed_planning_time = self.required('allowed_planning_time', Parameter.Type.DOUBLE)
+        self.velocity_scaling = self.required('velocity_scaling', Parameter.Type.DOUBLE)
+        self.acceleration_scaling = self.required('acceleration_scaling', Parameter.Type.DOUBLE)
+        self.gripper_open_position = self.required('gripper_open_position', Parameter.Type.DOUBLE)
+        self.gripper_closed_position = self.required(
+            'gripper_closed_position', Parameter.Type.DOUBLE)
+        self.gripper_max_effort = self.required('gripper_max_effort', Parameter.Type.DOUBLE)
+        # Horizontal grasp offsets in base_link, relative to the base -> ball
+        # direction: radial moves away from the base, lateral to the arm's left.
+        self.grasp_radial_offset = self.required('grasp_radial_offset', Parameter.Type.DOUBLE)
+        self.grasp_lateral_offset = self.required('grasp_lateral_offset', Parameter.Type.DOUBLE)
 
-        # Under load, the servos stop short of their command although their
-        # encoders see the real angle. After MoveIt, command the remaining
-        # joint error again before closing the gripper.
-        self.sag_iterations = int(
-            self.declare_parameter('sag_compensation_iterations', 2).value
-        )
-        self.sag_tolerance = float(
-            self.declare_parameter('sag_tolerance', 0.005).value
-        )
-        self.sag_max_correction = float(
-            self.declare_parameter('sag_max_correction', 0.08).value
-        )
-        self.sag_settle_time = float(
-            self.declare_parameter('sag_settle_time', 0.4).value
-        )
-        self.sag_move_duration = float(
-            self.declare_parameter('sag_move_duration', 0.6).value
-        )
-        # Stop above the ball, measure the sag there, then descend vertically with
-        # that joint correction already added so the arm does not dip to the desk.
-        self.pregrasp_height = float(
-            self.declare_parameter('pregrasp_height', 0.03).value
-        )
-        self.descent_duration = float(
-            self.declare_parameter('descent_duration', 2.0).value
-        )
-        self.descent_step = float(self.declare_parameter('descent_step', 0.002).value)
-        self.descent_max_joint_step = float(
-            self.declare_parameter('descent_max_joint_step', 0.05).value
-        )
-        self.stage = 'final'
         self.grasp_joints: dict[str, float] = {}
-        self.pregrasp_joints: dict[str, float] = {}
-        self.descent_delta: dict[str, float] = {}
         self.latest_joints: dict[str, float] = {}
-        self.sag_target: dict[str, float] = {}
-        self.sag_command: dict[str, float] = {}
-        self.sag_iteration = 0
-        self.sag_timer = None
 
         self.latest_ball: PoseStamped | None = None
         self.latest_ball_received = None
@@ -152,19 +89,21 @@ class BallPickNode(Node):
         self.busy = False
         self.approach_only = False
         self.pick_outcome = ''
+        self.operation_id = 0
+        self.operation_state = 'idle'
+        self.operation_message = ''
+        self.operation_target = None
 
         self.create_subscription(PoseStamped, '/ball_goal/pose', self.store_ball, 10)
         self.create_subscription(JointState, '/joint_states', self.store_joints, 10)
         self.create_service(Trigger, '/pick_ball', self.request_pick)
         self.create_service(Trigger, '/approach_ball', self.request_approach)
+        self.create_service(Trigger, '/prepare_pick_trial', self.prepare_trial)
+        self.create_service(Trigger, '/pick_status', self.pick_status)
         self.move_group = ActionClient(self, MoveGroup, '/move_action')
         self.gripper = ActionClient(
             self, GripperCommand, '/gripper_controller/gripper_cmd'
         )
-        self.arm_trajectory = ActionClient(
-            self, FollowJointTrajectory, '/arm_controller/follow_joint_trajectory'
-        )
-        self.fk_client = self.create_client(GetPositionFK, '/compute_fk')
         self.ik_client = self.create_client(GetPositionIK, '/compute_ik')
         self.display_publisher = self.create_publisher(
             DisplayTrajectory, '/display_planned_path', 10
@@ -180,12 +119,50 @@ class BallPickNode(Node):
             + (', then return the arm to default.' if self.return_to_default else '.')
         )
 
+    def required(self, name: str, kind: Parameter.Type):
+        value = self.declare_parameter(name, kind).value
+        if value is None:
+            raise ValueError(f'Missing ROS parameter {name!r} (see config/pipeline.yaml)')
+        if isinstance(value, float) and not isfinite(value):
+            raise ValueError(f'ROS parameter {name!r} must be finite')
+        return value
+
     def store_ball(self, message: PoseStamped) -> None:
         self.latest_ball = deepcopy(message)
         self.latest_ball_received = self.get_clock().now()
 
     def store_joints(self, message: JointState) -> None:
         self.latest_joints.update(zip(message.name, message.position))
+
+    def pick_status(self, request, response):
+        del request
+        response.success = True
+        response.message = json.dumps({
+            'operation_id': self.operation_id,
+            'state': self.operation_state,
+            'busy': self.busy,
+            'message': self.operation_message,
+            'target': self.operation_target,
+            'joints': self.latest_joints,
+            'return_to_default': self.return_to_default,
+        })
+        return response
+
+    def prepare_trial(self, request, response):
+        del request
+        if self.busy or not self.return_to_default or not self.move_group.server_is_ready():
+            response.success = False
+            response.message = 'Preparation refusee: robot occupe, retour default desactive ou MoveIt indisponible.'
+            return response
+        self.busy = True
+        self.operation_id += 1
+        self.operation_state = 'running'
+        self.operation_message = 'Positionnement initial en default.'
+        self.operation_target = None
+        self.return_after_pick('Preparation de l essai.')
+        response.success = True
+        response.message = str(self.operation_id)
+        return response
 
     def request_approach(self, request: Trigger.Request, response: Trigger.Response):
         response = self.request_pick(request, response)
@@ -247,14 +224,16 @@ class BallPickNode(Node):
             return response
 
         self.busy = True
+        self.operation_id += 1
+        self.operation_state = 'running'
+        self.operation_message = 'Prise en cours.'
+        self.operation_target = dict(zip(('x', 'y', 'z'), coordinates))
         self.approach_only = False
         self.pick_outcome = ''
-        self.stage = 'pregrasp' if self.pregrasp_height > 0.0 else 'final'
         self.active_target = target
         self.frozen_target = deepcopy(target)
         self.publish_frozen_target()
         self.grasp_joints = {}
-        self.pregrasp_joints = {}
         self.find_grasp_ik(0)
         response.success = True
         response.message = (
@@ -324,26 +303,6 @@ class BallPickNode(Node):
         solution = dict(zip(response.solution.joint_state.name,
                             response.solution.joint_state.position))
         self.grasp_joints = {name: solution[name] for name in names if name in solution}
-        if self.stage != 'pregrasp':
-            self.send_gripper_goal(self.gripper_open_position, self.gripper_opened)
-            return
-        above = deepcopy(self.active_target.pose.position)
-        above.z += self.pregrasp_height
-        request = self.ik_request(above, self.grasp_joints, 0.1)
-        self.ik_client.call_async(request).add_done_callback(self.pregrasp_ik_done)
-
-    def pregrasp_ik_done(self, future) -> None:
-        try:
-            response = future.result()
-        except Exception as error:  # noqa: BLE001
-            self.abort(f'Position au-dessus de la balle impossible: {error}')
-            return
-        if response.error_code.val != MoveItErrorCodes.SUCCESS:
-            self.abort('Aucune position sure 3 cm au-dessus de la balle.')
-            return
-        solution = dict(zip(response.solution.joint_state.name,
-                            response.solution.joint_state.position))
-        self.pregrasp_joints = {name: solution[name] for name in self.grasp_joints}
         self.send_gripper_goal(self.gripper_open_position, self.gripper_opened)
 
     def send_gripper_goal(self, position: float, result_callback) -> None:
@@ -378,9 +337,7 @@ class BallPickNode(Node):
                 f'(position={result.position:.4f}, stalled={result.stalled}).'
             )
             return
-        self.get_logger().info(
-            'Pince ouverte. Mouvement au-dessus de la balle.' if self.stage == 'pregrasp'
-            else 'Pince ouverte. Envoi du goal exact de la balle.')
+        self.get_logger().info('Pince ouverte. Envoi du goal exact de la balle.')
         self.send_arm_goal()
 
     def send_arm_goal(self) -> None:
@@ -388,19 +345,7 @@ class BallPickNode(Node):
             self.abort('Goal de balle perdu avant le mouvement.')
             return
 
-        if self.stage == 'pregrasp' and getattr(self, 'pregrasp_joints', None):
-            # Joint goal derived from a checked grasp configuration, so the
-            # vertical descent continues on the same IK branch.
-            constraints = Constraints()
-            constraints.name = 'above_ball'
-            for name, value in self.pregrasp_joints.items():
-                constraints.joint_constraints.append(JointConstraint(
-                    joint_name=name, position=value, tolerance_above=0.005,
-                    tolerance_below=0.005, weight=1.0,
-                ))
-            goal = self.make_arm_goal(constraints)
-        else:
-            goal = self.make_arm_goal(self.make_position_constraint(self.active_target))
+        goal = self.make_arm_goal(self.make_position_constraint(self.active_target))
         self.move_group.send_goal_async(goal).add_done_callback(self.arm_goal_response)
 
     def make_arm_goal(self, constraints: Constraints) -> MoveGroup.Goal:
@@ -454,182 +399,14 @@ class BallPickNode(Node):
             display.trajectory = [planned]
             self.display_publisher.publish(display)
 
-        target = self.planned_final_positions(planned)
-        if target and self.sag_iterations > 0:
-            self.sag_target = target
-            self.sag_command = dict(target)
-            self.sag_iteration = 0
-            self.schedule_sag_check()
-            return
         self.arm_reached()
 
-    @staticmethod
-    def planned_final_positions(planned) -> dict[str, float]:
-        if planned is None:
-            return {}
-        trajectory = planned.joint_trajectory
-        if not trajectory.points:
-            return {}
-        return dict(zip(trajectory.joint_names, trajectory.points[-1].positions))
-
-    def schedule_sag_check(self) -> None:
-        if self.sag_timer is not None:
-            self.sag_timer.cancel()
-        self.sag_timer = self.create_timer(self.sag_settle_time, self.check_sag)
-
-    def check_sag(self) -> None:
-        self.sag_timer.cancel()
-        self.sag_timer = None
-        if not all(name in self.latest_joints for name in self.sag_target):
-            self.get_logger().warning('Angles reels indisponibles: aucune compensation.')
-            self.arm_reached()
-            return
-        error = {name: target - self.latest_joints[name]
-                 for name, target in self.sag_target.items()}
-        worst = max(abs(value) for value in error.values())
-        self.get_logger().info('Ecart par articulation (rad): ' + ', '.join(
-            f'{name.split("_to_")[0]}={value:+.4f}' for name, value in error.items()))
-        if worst <= self.sag_tolerance:
-            self.get_logger().info(f'Ecart articulaire {worst:.4f} rad: position atteinte.')
-            self.arm_reached()
-            return
-        if self.sag_iteration >= self.sag_iterations:
-            self.get_logger().warning(
-                f'Ecart articulaire restant {worst:.4f} rad apres '
-                f'{self.sag_iteration} correction(s).'
-            )
-            self.arm_reached()
-            return
-        command = {name: self.sag_command[name] + value for name, value in error.items()}
-        if any(abs(command[name] - target) > self.sag_max_correction
-               for name, target in self.sag_target.items()):
-            self.get_logger().warning(
-                f'Ecart articulaire {worst:.4f} rad trop grand pour une correction sure.'
-            )
-            self.arm_reached()
-            return
-        self.sag_iteration += 1
-        self.sag_command = command
-        self.get_logger().info(
-            f'Ecart articulaire {worst:.4f} rad: correction {self.sag_iteration}.'
-        )
-        goal = FollowJointTrajectory.Goal()
-        goal.trajectory.joint_names = list(command)
-        point = JointTrajectoryPoint()
-        point.positions = list(command.values())
-        point.time_from_start = Duration(seconds=self.sag_move_duration).to_msg()
-        goal.trajectory.points = [point]
-        future = self.arm_trajectory.send_goal_async(goal)
-        future.add_done_callback(self.sag_goal_response)
-
-    def sag_goal_response(self, future) -> None:
-        try:
-            handle = future.result()
-        except Exception as error:  # noqa: BLE001
-            self.abort(f'Correction du bras impossible: {error}')
-            return
-        if not handle.accepted:
-            self.abort('Correction du bras refusee.')
-            return
-        handle.get_result_async().add_done_callback(lambda _: self.schedule_sag_check())
-
     def arm_reached(self) -> None:
-        if getattr(self, 'stage', 'final') == 'pregrasp':
-            self.start_descent()
-            return
         if self.approach_only:
             self.finish('Approche terminee. Pince ouverte pour verifier le centrage; aucun retour automatique.')
             return
         self.get_logger().info('Goal balle atteint. Fermeture de la pince.')
         self.send_gripper_goal(self.gripper_closed_position, self.gripper_closed)
-
-    def start_descent(self) -> None:
-        if not self.sag_target:
-            self.abort('Angles de la position au-dessus de la balle inconnus: descente annulee.')
-            return
-        self.descent_delta = {name: self.sag_command[name] - target
-                              for name, target in self.sag_target.items()}
-        request = GetPositionFK.Request()
-        request.header.frame_id = self.base_frame
-        request.fk_link_names = [self.tip_link]
-        request.robot_state.is_diff = True
-        request.robot_state.joint_state.name = list(self.sag_target)
-        request.robot_state.joint_state.position = list(self.sag_target.values())
-        self.fk_client.call_async(request).add_done_callback(self.descent_fk_done)
-
-    def descent_fk_done(self, future) -> None:
-        try:
-            response = future.result()
-        except Exception as error:  # noqa: BLE001
-            self.abort(f'Calcul de la descente impossible: {error}')
-            return
-        if response.error_code.val != MoveItErrorCodes.SUCCESS or not response.pose_stamped:
-            self.abort(f'Pose de la pince inconnue, code {response.error_code.val}.')
-            return
-        self.descent_pose = deepcopy(response.pose_stamped[0].pose)
-        self.descent_names = list(self.sag_target)
-        self.descent_points = []
-        self.descent_steps = max(1, ceil(self.pregrasp_height / self.descent_step))
-        self.request_descent_ik(list(self.sag_target.values()))
-
-    def request_descent_ik(self, seed) -> None:
-        # MoveIt's Cartesian path stops after a few millimetres on this 5-axis arm:
-        # descend with position-only IK, each step seeded from the previous one.
-        step = len(self.descent_points) + 1
-        request = GetPositionIK.Request()
-        request.ik_request.group_name = self.group_name
-        request.ik_request.ik_link_name = self.tip_link
-        request.ik_request.robot_state.is_diff = True
-        request.ik_request.robot_state.joint_state.name = self.descent_names
-        request.ik_request.robot_state.joint_state.position = list(seed)
-        request.ik_request.avoid_collisions = True
-        request.ik_request.timeout = Duration(seconds=0.05).to_msg()
-        request.ik_request.pose_stamped.header.frame_id = self.base_frame
-        request.ik_request.pose_stamped.pose = deepcopy(self.descent_pose)
-        request.ik_request.pose_stamped.pose.position.z -= (
-            self.pregrasp_height * step / self.descent_steps)
-        self.ik_client.call_async(request).add_done_callback(self.descent_ik_done)
-
-    def descent_ik_done(self, future) -> None:
-        try:
-            response = future.result()
-        except Exception as error:  # noqa: BLE001
-            self.abort(f'Descente verticale impossible: {error}')
-            return
-        step = len(self.descent_points) + 1
-        if response.error_code.val != MoveItErrorCodes.SUCCESS:
-            self.abort(
-                f'Descente verticale bloquee au pas {step}/{self.descent_steps} '
-                f'(code {response.error_code.val}).'
-            )
-            return
-        solution = dict(zip(response.solution.joint_state.name,
-                            response.solution.joint_state.position))
-        point = [solution[name] for name in self.descent_names]
-        previous = self.descent_points[-1] if self.descent_points else list(self.sag_target.values())
-        if max(abs(a - b) for a, b in zip(point, previous)) > self.descent_max_joint_step:
-            self.abort(f'Saut articulaire pendant la descente au pas {step}.')
-            return
-        self.descent_points.append(point)
-        if step < self.descent_steps:
-            self.request_descent_ik(point)
-            return
-        self.execute_descent()
-
-    def execute_descent(self) -> None:
-        goal = make_descent_goal(
-            self.descent_names, self.descent_points, self.descent_delta, self.descent_duration,
-        )
-        self.stage = 'final'
-        self.sag_target = dict(zip(self.descent_names, self.descent_points[-1]))
-        self.sag_command = {name: value + self.descent_delta.get(name, 0.0)
-                            for name, value in self.sag_target.items()}
-        self.sag_iteration = 0
-        self.get_logger().info(
-            f'Descente verticale de {self.pregrasp_height * 100:.1f} cm avec la correction '
-            'mesuree au-dessus de la balle.'
-        )
-        self.arm_trajectory.send_goal_async(goal).add_done_callback(self.sag_goal_response)
 
     def gripper_closed(self, future) -> None:
         try:
@@ -656,6 +433,11 @@ class BallPickNode(Node):
             self.finish(f'Prise terminee: {message}')
             return
         self.pick_outcome = message
+        self.default_replan_count = 0
+        self.default_replan_timer = None
+        self.send_default_goal()
+
+    def send_default_goal(self) -> None:
         constraints = Constraints()
         constraints.name = 'return_to_default'
         for name, value in self.default_joint_positions:
@@ -663,7 +445,7 @@ class BallPickNode(Node):
                 joint_name=name, position=value, tolerance_above=0.005,
                 tolerance_below=0.005, weight=1.0,
             ))
-        self.get_logger().info(f'{message} Retour du bras en default, pince fermee.')
+        self.get_logger().info(f'{self.pick_outcome} Retour du bras en default, pince fermee.')
         try:
             future = self.move_group.send_goal_async(self.make_arm_goal(constraints))
             future.add_done_callback(self.default_goal_response)
@@ -686,12 +468,27 @@ class BallPickNode(Node):
             code = wrapped.result.error_code.val
             if (wrapped.status != GoalStatus.STATUS_SUCCEEDED
                     or code != MoveItErrorCodes.SUCCESS):
+                if (wrapped.status == GoalStatus.STATUS_ABORTED
+                        and code == MoveItErrorCodes.CONTROL_FAILED
+                        and self.default_replan_count < 2):
+                    self.default_replan_count += 1
+                    self.get_logger().warning(
+                        f'Retour default refuse ou interrompu: nouvelle planification '
+                        f'{self.default_replan_count}/2 apres stabilisation.')
+                    self.default_replan_timer = self.create_timer(
+                        0.4, self.retry_default_return)
+                    return
                 self.abort(f'Retour en default echoue, code MoveIt {code}.')
                 return
         except Exception as error:  # noqa: BLE001
             self.abort(f'Retour en default echoue: {error}')
             return
         self.finish(f'Prise terminee: {self.pick_outcome} Bras revenu en default.')
+
+    def retry_default_return(self) -> None:
+        self.default_replan_timer.cancel()
+        self.default_replan_timer = None
+        self.send_default_goal()
 
     def make_position_constraint(self, target: PoseStamped) -> Constraints:
         sphere = SolidPrimitive()
@@ -705,7 +502,6 @@ class BallPickNode(Node):
         position = PositionConstraint()
         position.header = target.header
         position.link_name = self.tip_link
-        position.target_point_offset = self.tcp_offset
         position.constraint_region.primitives = [sphere]
         position.constraint_region.primitive_poses = [sphere_pose]
         position.weight = 1.0
@@ -772,29 +568,19 @@ class BallPickNode(Node):
 
     def finish(self, message: str) -> None:
         self.get_logger().info(message)
+        self.operation_state = 'succeeded'
+        self.operation_message = message
         self.busy = False
         self.active_target = None
         self.clear_frozen_target()
 
     def abort(self, message: str) -> None:
         self.get_logger().error(message)
+        self.operation_state = 'failed'
+        self.operation_message = message
         self.busy = False
         self.active_target = None
         self.clear_frozen_target()
-
-
-def make_descent_goal(names, positions, delta, duration) -> FollowJointTrajectory.Goal:
-    """Joint path with the measured sag correction, evenly timed over duration."""
-    goal = FollowJointTrajectory.Goal()
-    goal.trajectory.joint_names = list(names)
-    count = len(positions)
-    for index, values in enumerate(positions):
-        point = JointTrajectoryPoint()
-        point.positions = [value + delta.get(name, 0.0) for name, value in zip(names, values)]
-        point.time_from_start = Duration(
-            seconds=max(0.1, duration) * (index + 1) / count).to_msg()
-        goal.trajectory.points.append(point)
-    return goal
 
 
 def main() -> None:

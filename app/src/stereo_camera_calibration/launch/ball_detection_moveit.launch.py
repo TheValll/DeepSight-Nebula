@@ -1,11 +1,16 @@
-"""Fine-tuned ball detection with the real robot in enforced read-only mode."""
+"""Fine-tuned ball detection with the real robot in enforced read-only mode.
+
+The real hardware publishes measured joint positions; every servo output is
+blocked (read_only) and no arm or gripper command controller is loaded.
+"""
 from pathlib import Path
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
 from moveit_configs_utils import MoveItConfigsBuilder
 from moveit_configs_utils.launches import (
     generate_move_group_launch,
@@ -14,33 +19,33 @@ from moveit_configs_utils.launches import (
     generate_static_virtual_joint_tfs_launch,
 )
 
+CALIBRATION = 'app/calibration/stereo_calib_standard.xml'
+WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
+CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
+SERIAL = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
+
 
 def generate_launch_description():
-    # Works from either the source file or a colcon-installed copy in this repo.
+    # Works from the source file and from a colcon-installed copy in this repo.
     root = next(parent for parent in Path(__file__).resolve().parents
-                if (parent / "app/calibration/stereo_calib.xml").is_file())
-    weights = root / "benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt"
+                if (parent / CALIBRATION).is_file())
+    pipeline = PathJoinSubstitution(
+        [FindPackageShare('stereo_camera_calibration'), 'config', 'pipeline.yaml'])
     moveit_config = MoveItConfigsBuilder(
-        "hiwonder_esp32", package_name="hiwonder_xarm_esp32_moveit_config"
+        'hiwonder_esp32', package_name='hiwonder_xarm_esp32_moveit_config'
     ).robot_description(mappings={
-        "use_mock_hardware": "false",
-        "serial_port": LaunchConfiguration("serial_port"),
-        "read_only": "true",
+        'use_mock_hardware': 'false',
+        'serial_port': LaunchConfiguration('serial_port'),
+        'read_only': 'true',
     }).to_moveit_configs()
-    # The real hardware publishes measured positions, but all outputs are blocked.
-    description = LaunchDescription()
-    for argument in (
-        DeclareLaunchArgument("serial_port", default_value="/dev/ttyUSB0"),
-        DeclareLaunchArgument("camera_index", default_value="2"),
-        DeclareLaunchArgument("calibration_file", default_value=str(root / "app/calibration/stereo_calib_standard.xml")),
-        DeclareLaunchArgument("model", default_value=str(weights)),
-        DeclareLaunchArgument("confidence", default_value="0.75"),
-        DeclareLaunchArgument("minimum_depth", default_value="0.06"),
-        DeclareLaunchArgument("num_disparities", default_value="224"),
-        DeclareLaunchArgument("base_vertical_offset", default_value="0.0"),
-    ):
-        description.add_action(argument)
-    description.add_action(SetLaunchConfiguration("allow_trajectory_execution", "false"))
+
+    description = LaunchDescription([
+        DeclareLaunchArgument('serial_port', default_value=SERIAL),
+        DeclareLaunchArgument('camera_device', default_value=CAMERA),
+        DeclareLaunchArgument('calibration_file', default_value=str(root / CALIBRATION)),
+        DeclareLaunchArgument('model', default_value=str(root / WEIGHTS)),
+        SetLaunchConfiguration('allow_trajectory_execution', 'false'),
+    ])
     # Pass the SAME real/read-only description to every component. The generic
     # demo launch includes files that rebuild a separate mock URDF instead.
     for generated in (
@@ -52,45 +57,42 @@ def generate_launch_description():
         for action in generated.entities:
             description.add_action(action)
     description.add_action(Node(
-        package="controller_manager", executable="ros2_control_node",
-        parameters=[str(moveit_config.package_path / "config/ros2_controllers.yaml")],
-        remappings=[("/controller_manager/robot_description", "/robot_description")],
-        output="screen",
+        package='controller_manager', executable='ros2_control_node',
+        parameters=[str(moveit_config.package_path / 'config/ros2_controllers.yaml')],
+        remappings=[('/controller_manager/robot_description', '/robot_description')],
+        output='screen',
     ))
     # Only publish joint states: no arm or gripper command controller is loaded.
     description.add_action(Node(
-        package="controller_manager", executable="spawner",
-        arguments=["joint_state_broadcaster"], output="screen",
+        package='controller_manager', executable='spawner',
+        arguments=['joint_state_broadcaster'], output='screen',
     ))
     description.add_action(Node(
-        package="stereo_camera_calibration", executable="rectification_exe",
-        parameters=[{
-            "camera_index": ParameterValue(LaunchConfiguration("camera_index"), value_type=int),
-            "calibration_file": ParameterValue(LaunchConfiguration("calibration_file"), value_type=str),
-            "show_debug_windows": False,
-            "publish_depth_color": False,
-            "publish_point_cloud": False,
-            "publish_metrics": True,
-            "minimum_depth": ParameterValue(LaunchConfiguration("minimum_depth"), value_type=float),
-            "num_disparities": ParameterValue(LaunchConfiguration("num_disparities"), value_type=int),
-        }], output="screen",
+        package='stereo_camera_calibration', executable='rectification_exe',
+        parameters=[pipeline, {
+            'calibration_file': ParameterValue(
+                LaunchConfiguration('calibration_file'), value_type=str),
+            'camera_device': ParameterValue(
+                LaunchConfiguration('camera_device'), value_type=str),
+            'show_debug_windows': False,
+            'publish_depth_color': False,
+            'publish_point_cloud': False,
+            'publish_metrics': True,
+        }], output='screen',
     ))
     description.add_action(Node(
-        package="stereo_camera_calibration", executable="yolo_detection_node",
-        parameters=[{
-            "model": ParameterValue(LaunchConfiguration("model"), value_type=str),
-            "confidence": ParameterValue(LaunchConfiguration("confidence"), value_type=float),
-            "imgsz": 1280,
-            "device": ParameterValue("0", value_type=str),
-            "classes": [0],
-            "prompt": ParameterValue("", value_type=str),
-            "show_window": False,
-            "show_marker_labels": False,
-            "minimum_depth": ParameterValue(LaunchConfiguration("minimum_depth"), value_type=float),
-            "base_vertical_offset": ParameterValue(LaunchConfiguration("base_vertical_offset"), value_type=float),
-            "publish_annotated_image": True,
-            "publish_metrics": True,
-        }], output="screen",
+        package='stereo_camera_calibration', executable='yolo_detection_node',
+        parameters=[pipeline, {
+            'model': ParameterValue(LaunchConfiguration('model'), value_type=str),
+            'show_window': False,
+            'show_marker_labels': False,
+            'publish_annotated_image': True,
+            'publish_metrics': True,
+        }], output='screen',
     ))
-    # No ball_goal_preview, ball_plan_preview or ball_pick node: detection only.
+    # Passive: shows the goal the pick node would use, in base_link.
+    description.add_action(Node(
+        package='stereo_camera_calibration', executable='ball_goal_preview_node',
+        parameters=[pipeline, {'show_marker_labels': True}], output='screen',
+    ))
     return description

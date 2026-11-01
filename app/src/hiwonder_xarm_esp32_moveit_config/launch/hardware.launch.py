@@ -35,7 +35,8 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 'serial_port',
-                default_value='/dev/ttyUSB0',
+                # Stable path of the CH340 adapter (ttyUSB0 may change).
+                default_value='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
                 description='Serial port connected to the ESP32 Rust firmware',
             ),
             DeclareLaunchArgument('use_rviz', default_value='true'),
@@ -76,8 +77,9 @@ def generate_launch_description():
         executable='add_ground',
         # The suction cups raise base_link about 5 mm above the desk
         # (checkerboard measurement, 2026-10-16). A grasp brings the servo 1
-        # housing about 7 mm from the desk; the pick node removes the servo sag
-        # before the final descent, so keep a 4 mm margin on that housing only.
+        # housing about 7 mm from the desk and the arm sags a few millimetres
+        # under load (no software compensation), so keep a 4 mm margin on that
+        # housing only.
         parameters=[{
             'floor_height': -0.005,
             'floor_clearance': 0.0,

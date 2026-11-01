@@ -119,7 +119,7 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 'serial_port',
-                default_value='/dev/ttyUSB0',
+                default_value='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
                 description='Serial port connected to the ESP32 Rust firmware',
             ),
             # Nodes are created only after this runtime validation succeeds.

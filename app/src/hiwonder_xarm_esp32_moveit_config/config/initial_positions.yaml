@@ -1,6 +1,5 @@
-# Default initial positions for hiwonder_esp32's ros2_control fake system
-
-# Default pose uses positions inside the measured safe joint limits.
+# Initial joint states of ros2_control (mock hardware before the first read).
+# Keep equal to the SRDF `default` pose.
 initial_positions:
   gripper_left_joint: 0.0
   limb1_to_base_link_joint: -0.035183482

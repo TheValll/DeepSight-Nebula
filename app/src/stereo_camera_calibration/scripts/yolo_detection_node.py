@@ -12,9 +12,9 @@ from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from rclpy.duration import Duration
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, Image
-from tf2_ros import Buffer, TransformException, TransformListener
 from ultralytics import YOLO, YOLOE
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -23,23 +23,18 @@ class YoloDetectionNode(Node):
     def __init__(self) -> None:
         super().__init__("yolo_detection_node")
 
-        model_path = self.declare_parameter("model", "yolo11n.pt").value
-        self.confidence = float(self.declare_parameter("confidence", 0.4).value)
-        self.image_size = int(self.declare_parameter("imgsz", 640).value)
+        # Tuning parameters have no code default: see config/pipeline.yaml.
+        model_path = self.required("model", Parameter.Type.STRING)
+        if not model_path:
+            raise ValueError("ROS parameter 'model' must name a weights file")
+        self.confidence = self.required("confidence", Parameter.Type.DOUBLE)
+        self.image_size = self.required("imgsz", Parameter.Type.INTEGER)
         self.device = str(self.declare_parameter("device", "0").value)
-        self.classes = list(self.declare_parameter("classes", [32]).value)
-        self.prompt = str(self.declare_parameter("prompt", "").value)
-        self.minimum_depth = float(self.declare_parameter("minimum_depth", 0.15).value)
-        self.maximum_depth = float(self.declare_parameter("maximum_depth", 2.0).value)
-        # Manual base_link vertical adjustment for stationary calibration tests.
-        self.base_vertical_offset = float(
-            self.declare_parameter("base_vertical_offset", 0.0).value
-        )
-        if not np.isfinite(self.base_vertical_offset):
-            raise ValueError("base_vertical_offset must be finite")
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.ball_diameter = float(self.declare_parameter("ball_diameter", 0.04).value)
+        self.classes = list(self.required("classes", Parameter.Type.INTEGER_ARRAY))
+        self.prompt = self.required("prompt", Parameter.Type.STRING)
+        self.minimum_depth = self.required("minimum_depth", Parameter.Type.DOUBLE)
+        self.maximum_depth = self.required("maximum_depth", Parameter.Type.DOUBLE)
+        self.ball_diameter = self.required("ball_diameter", Parameter.Type.DOUBLE)
         self.show_window = bool(self.declare_parameter("show_window", True).value)
         self.show_marker_labels = bool(
             self.declare_parameter("show_marker_labels", True).value
@@ -54,10 +49,13 @@ class YoloDetectionNode(Node):
         self.bridge = CvBridge()
         previous_directory = os.getcwd()
         resolved_model_path = os.path.abspath(os.path.expanduser(model_path))
+        # Never let Ultralytics silently download a model with the same name.
+        if not os.path.isfile(resolved_model_path):
+            raise FileNotFoundError(f"YOLO weights not found: {resolved_model_path}")
         try:
-            if os.path.isfile(resolved_model_path):
-                os.chdir(os.path.dirname(resolved_model_path))
-                model_path = os.path.basename(resolved_model_path)
+            # Some YOLOE assets are resolved relative to the weights directory.
+            os.chdir(os.path.dirname(resolved_model_path))
+            model_path = os.path.basename(resolved_model_path)
             if self.prompt:
                 self.model = YOLOE(model_path)
                 self.model.set_classes([self.prompt])
@@ -100,11 +98,22 @@ class YoloDetectionNode(Node):
             DiagnosticArray, "/pipeline/metrics", sensor_qos
         )
 
+        names = self.model.names
+        unknown = [c for c in self.classes if c not in names]
+        if unknown and not self.prompt:
+            raise ValueError(f"Classes {unknown} not in model classes {names}")
+        target = self.prompt or {c: names[c] for c in self.classes} or "all"
         self.get_logger().info(
-            f"Loaded {model_path} on CUDA device {self.device}; "
-            f"target: {self.prompt or self.classes or 'all'}; "
+            f"Loaded {resolved_model_path} on CUDA device {self.device}; "
+            f"target: {target}; "
             f"imgsz: {self.image_size}; waiting for stereo topics"
         )
+
+    def required(self, name: str, kind: Parameter.Type):
+        value = self.declare_parameter(name, kind).value
+        if value is None:
+            raise ValueError(f"Missing ROS parameter {name!r} (see config/pipeline.yaml)")
+        return value
 
     def store_camera_info(self, message: CameraInfo) -> None:
         self.depth_intrinsics = (message.k[0], message.k[4], message.k[2], message.k[5])
@@ -218,31 +227,6 @@ class YoloDetectionNode(Node):
                         point_x = (center_x - cx) * median_depth / fx
                         point_y = (center_y - cy) * median_depth / fy
                         point_z = median_depth
-                        if self.base_vertical_offset != 0.0:
-                            try:
-                                transform = self.tf_buffer.lookup_transform(
-                                    depth_message.header.frame_id,
-                                    "base_link",
-                                    rclpy.time.Time.from_msg(depth_message.header.stamp),
-                                    timeout=Duration(seconds=0.1),
-                                )
-                            except TransformException as error:
-                                self.get_logger().warning(
-                                    f"Cannot apply vertical detection offset: {error}",
-                                    throttle_duration_sec=2.0,
-                                )
-                                continue
-                            q = transform.transform.rotation
-                            # Rotate a vector, not a point: camera translation
-                            # must not be added to the requested base-Z offset.
-                            delta = self.base_vertical_offset * np.array([
-                                2.0 * (q.x * q.z + q.w * q.y),
-                                2.0 * (q.y * q.z - q.w * q.x),
-                                1.0 - 2.0 * (q.x * q.x + q.y * q.y),
-                            ])
-                            point_x += float(delta[0])
-                            point_y += float(delta[1])
-                            point_z += float(delta[2])
 
                         sphere = Marker()
                         sphere.header = depth_message.header

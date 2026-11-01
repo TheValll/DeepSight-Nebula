@@ -51,8 +51,7 @@ its first read, allowing a CH340-triggered ESP32 reset to complete.
 ```bash
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch hiwonder_xarm_esp32_moveit_config calibration_rviz.launch.py \
-  serial_port:=/dev/ttyUSB0
+ros2 launch hiwonder_xarm_esp32_moveit_config calibration_rviz.launch.py
 ```
 
 The gripper was measured from raw `250` open to `806` closed. Its safe range
@@ -71,13 +70,17 @@ From the `app` workspace:
 ```bash
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
-ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py \
-  serial_port:=/dev/ttyUSB0
+ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py
 ```
+
+Both launches default to the stable path of the CH340 adapter,
+`/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0`; override it with
+`serial_port:=...` if needed.
 
 The plugin reads all six servos and initializes the controller commands from
 their actual positions before accepting trajectory commands. During operation,
-a lost servo reply is retried once; the joint then keeps its last position for
+a stray reply (another servo, or a bad checksum) is skipped until the expected
+reply or the 50 ms timeout; a lost servo reply is retried once; the joint then keeps its last position for
 up to `max_consecutive_read_failures` cycles (5 by default) before the plugin
 reports an error. Reads during activation stay strict. Deactivation
 sends a stop command to every servo but does not unload their torque.

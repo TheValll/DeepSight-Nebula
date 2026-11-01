@@ -35,16 +35,18 @@ public:
   RectificationNode()
   : Node("stereo_rectification_node")
   {
-    const auto calibration_file =
-      declare_parameter<std::string>("calibration_file", "calibration/stereo_calib.xml");
-    const auto camera_index = declare_parameter<int>("camera_index", 0);
+    // No code default for the calibration, camera and depth settings: they come
+    // from the launch files and config/pipeline.yaml, and a missing one is an error.
+    const auto calibration_file = declare_parameter<std::string>("calibration_file");
+    // Stable V4L path (/dev/v4l/by-id/...) rather than an index that changes
+    // with the USB enumeration order.
+    const auto camera_device = declare_parameter<std::string>("camera_device");
     show_debug_windows_ = declare_parameter<bool>("show_debug_windows", true);
     publish_depth_color_ = declare_parameter<bool>("publish_depth_color", true);
     publish_point_cloud_ = declare_parameter<bool>("publish_point_cloud", true);
     publish_metrics_ = declare_parameter<bool>("publish_metrics", false);
-    num_disparities_ = declare_parameter<int>("num_disparities", 96);
-    min_depth_meters_ = static_cast<float>(
-      declare_parameter<double>("minimum_depth", 0.15));
+    num_disparities_ = declare_parameter<int>("num_disparities");
+    min_depth_meters_ = static_cast<float>(declare_parameter<double>("minimum_depth"));
 
     if (num_disparities_ <= 0 || num_disparities_ % 16 != 0) {
       throw std::runtime_error("num_disparities must be positive and divisible by 16");
@@ -64,7 +66,7 @@ public:
       "/pipeline/metrics", rclcpp::SensorDataQoS());
 
     load_calibration(calibration_file);
-    run(camera_index);
+    run(camera_device);
   }
 
 private:
@@ -86,8 +88,8 @@ private:
   bool publish_depth_color_ = true;
   bool publish_point_cloud_ = true;
   bool publish_metrics_ = false;
-  int num_disparities_ = 96;
-  float min_depth_meters_ = 0.15F;
+  int num_disparities_ = 0;
+  float min_depth_meters_ = 0.0F;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_color_publisher_;
@@ -147,9 +149,9 @@ private:
     RCLCPP_INFO(get_logger(), "Loaded stereo calibration from %s", path.c_str());
   }
 
-  void run(int camera_index)
+  void run(const std::string & camera_device)
   {
-    cv::VideoCapture camera(camera_index, cv::CAP_V4L2);
+    cv::VideoCapture camera(camera_device, cv::CAP_V4L2);
     camera.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
     camera.set(cv::CAP_PROP_FRAME_WIDTH, kStereoWidth);
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, kStereoHeight);
@@ -159,7 +161,7 @@ private:
     camera.set(cv::CAP_PROP_BUFFERSIZE, 2);
 
     if (!camera.isOpened()) {
-      throw std::runtime_error("Unable to open stereo camera");
+      throw std::runtime_error("Unable to open stereo camera " + camera_device);
     }
 
     const int actual_width = static_cast<int>(std::lround(camera.get(cv::CAP_PROP_FRAME_WIDTH)));

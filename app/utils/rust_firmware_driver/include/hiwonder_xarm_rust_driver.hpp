@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -57,9 +58,6 @@ public:
     void load(std::uint8_t servo_id);
     void unload(std::uint8_t servo_id);
 
-    void ready_position();
-    void default_position();
-
     static std::vector<std::uint8_t> build_frame(
         std::uint8_t servo_id, std::uint8_t command,
         const std::vector<std::uint8_t>& parameters = {});
@@ -84,7 +82,8 @@ private:
     std::vector<std::uint8_t> query(
         std::uint8_t servo_id, std::uint8_t command,
         std::size_t expected_parameter_count);
-    std::vector<std::uint8_t> read_frame(
+    // Next valid frame, or nullopt when the deadline passes.
+    std::optional<std::vector<std::uint8_t>> read_frame(
         std::chrono::steady_clock::time_point deadline);
     void ensure_open() const;
     void flush_input();

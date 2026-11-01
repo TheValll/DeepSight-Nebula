@@ -1,0 +1,65 @@
+# Single source of the perception and pick settings.
+# Loaded by perception_rviz, ball_detection_moveit and ball_pick_hardware.
+# The nodes have no code default for these values: a missing one stops the node.
+# File paths (calibration_file, model) and camera_index are passed by the launch
+# files, because they depend on the repository location and the USB port.
+
+/**:
+  ros__parameters:
+    # Shared by the depth image (rectification) and the 3D ball estimate (YOLO).
+    # Closer stereo matches are discarded.
+    minimum_depth: 0.06
+
+stereo_rectification_node:
+  ros__parameters:
+    # Must be divisible by 16. Computed on the 640x360 depth image.
+    num_disparities: 224
+
+yolo_detection_node:
+  ros__parameters:
+    # Fine-tuned YOLO26n (README, 2026-10-11): single class 0 = ping-pong ball.
+    # The benchmark used confidence 0.50; the robot uses 0.75 to avoid false goals.
+    confidence: 0.75
+    imgsz: 1280
+    classes: [0]
+    # Empty: plain YOLO model. A text prompt switches to YOLOE.
+    prompt: ""
+    maximum_depth: 2.0
+    ball_diameter: 0.04
+
+ball_goal_preview_node:
+  ros__parameters:
+    target_frame: base_link
+    # Horizontal shift from the measured ball surface toward its centre, along
+    # the camera -> ball direction (0 = target on the measured surface point).
+    surface_to_center_distance: 0.0
+    # Vertical shift of the target in base_link.
+    center_offset_z: 0.0
+    # Median of the last samples, all younger than sample_max_age seconds.
+    sample_count: 5
+    sample_max_age: 0.5
+
+ball_pick_node:
+  ros__parameters:
+    base_frame: base_link
+    tip_link: gripper_tcp_link
+    # Radius (m) of the MoveIt goal sphere around the target.
+    position_tolerance: 0.003
+    # The pick is refused when the last goal is older than this (s).
+    goal_max_age: 1.0
+    # 3D distance from base_link origin. Beyond about 0.30 m the servo 1
+    # housing reaches the desk.
+    max_target_distance: 0.29
+    planning_attempts: 2
+    allowed_planning_time: 1.0
+    velocity_scaling: 0.35
+    # Gentle acceleration and deceleration under camera load.
+    acceleration_scaling: 0.05
+    gripper_open_position: 0.013651
+    gripper_closed_position: -0.013651
+    gripper_max_effort: 10.0
+    # Grasp offsets in base_link, relative to the base -> ball direction.
+    grasp_radial_offset: 0.0
+    # Trial from the measured 60 mm opening and 40 mm ball: 60/2 - 40/2 = 10 mm
+    # toward the arm's left, seen from the base toward the ball.
+    grasp_lateral_offset: 0.010
