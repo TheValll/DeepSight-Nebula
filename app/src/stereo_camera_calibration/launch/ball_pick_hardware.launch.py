@@ -12,7 +12,8 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
-CALIBRATION = 'app/calibration/stereo_calib_standard.xml'
+CALIBRATION = 'app/calibration/stereo_calib.xml'
+CORRECTION = 'app/calibration/camera_desk_correction.yaml'
 WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
 CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
 SERIAL = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
@@ -39,6 +40,16 @@ def generate_launch_description():
                 'serial_port': LaunchConfiguration('serial_port'),
                 'use_rviz': LaunchConfiguration('use_rviz'),
             }.items(),
+        ),
+        # Recalibrates the camera tilt and height on the checkerboard at startup.
+        Node(
+            package='stereo_camera_calibration',
+            executable='camera_desk_calibration',
+            parameters=[pipeline, {
+                'correction_file': str(root / CORRECTION),
+                'calibrate': True,
+            }],
+            output='screen',
         ),
         Node(
             package='stereo_camera_calibration',

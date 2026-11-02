@@ -35,6 +35,9 @@ class YoloDetectionNode(Node):
         self.minimum_depth = self.required("minimum_depth", Parameter.Type.DOUBLE)
         self.maximum_depth = self.required("maximum_depth", Parameter.Type.DOUBLE)
         self.ball_diameter = self.required("ball_diameter", Parameter.Type.DOUBLE)
+        # Depth from the median visible surface to the ball centre (see pipeline.yaml).
+        self.surface_to_center_depth = self.required(
+            "surface_to_center_depth", Parameter.Type.DOUBLE)
         self.show_window = bool(self.declare_parameter("show_window", True).value)
         self.show_marker_labels = bool(
             self.declare_parameter("show_marker_labels", True).value
@@ -224,9 +227,11 @@ class YoloDetectionNode(Node):
                         mask_y, mask_x = np.nonzero(depth_mask)
                         center_x = float(np.median(mask_x))
                         center_y = float(np.median(mask_y))
-                        point_x = (center_x - cx) * median_depth / fx
-                        point_y = (center_y - cy) * median_depth / fy
-                        point_z = median_depth
+                        # The median lies on the visible surface: push the depth to the
+                        # ball centre, then back-project the image centre at that depth.
+                        point_z = median_depth + self.surface_to_center_depth
+                        point_x = (center_x - cx) * point_z / fx
+                        point_y = (center_y - cy) * point_z / fy
 
                         sphere = Marker()
                         sphere.header = depth_message.header

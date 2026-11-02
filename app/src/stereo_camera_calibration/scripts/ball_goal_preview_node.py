@@ -18,27 +18,6 @@ from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformL
 from visualization_msgs.msg import Marker, MarkerArray
 
 
-def horizontal_center_correction(surface, camera_origin, distance):
-    """Move a detected surface point horizontally away from the camera.
-
-    The stereo median lies on the visible ball surface, in front of the centre.
-    The point moves by `distance` along the horizontal camera -> ball direction
-    and keeps its height. Zero leaves the point unchanged.
-    """
-    surface = np.asarray(surface, dtype=float)
-    camera_origin = np.asarray(camera_origin, dtype=float)
-    if surface.shape != (3,) or not np.all(np.isfinite(surface)):
-        raise ValueError('Surface must be a finite 3D point')
-    if distance == 0.0:
-        return surface.copy()
-    horizontal_ray = surface - camera_origin
-    horizontal_ray[2] = 0.0
-    norm = np.linalg.norm(horizontal_ray)
-    if norm <= 1e-9:
-        raise ValueError('Ball is vertically below the camera: no horizontal direction')
-    return surface + distance * horizontal_ray / norm
-
-
 class BallGoalPreviewNode(Node):
     """Preview a ball goal in RViz without planning or commanding the robot."""
 
@@ -47,14 +26,9 @@ class BallGoalPreviewNode(Node):
 
         # Tuning parameters have no code default: see config/pipeline.yaml.
         self.target_frame = self.required("target_frame", Parameter.Type.STRING)
-        self.surface_to_center_distance = self.required(
-            "surface_to_center_distance", Parameter.Type.DOUBLE)
         self.center_offset_z = self.required("center_offset_z", Parameter.Type.DOUBLE)
-        if self.surface_to_center_distance < 0:
-            raise ValueError("surface_to_center_distance must be nonnegative")
-        if ((self.surface_to_center_distance != 0.0 or self.center_offset_z != 0.0)
-                and self.target_frame != "base_link"):
-            raise ValueError("Ball centre corrections require target_frame=base_link")
+        if self.center_offset_z != 0.0 and self.target_frame != "base_link":
+            raise ValueError("center_offset_z requires target_frame=base_link")
         sample_count = self.required("sample_count", Parameter.Type.INTEGER)
         self.sample_max_age = Duration(
             seconds=self.required("sample_max_age", Parameter.Type.DOUBLE))
@@ -140,13 +114,6 @@ class BallGoalPreviewNode(Node):
             [transformed.point.x, transformed.point.y, transformed.point.z],
             dtype=float,
         )
-        camera = transform.transform.translation
-        try:
-            position = horizontal_center_correction(
-                position, (camera.x, camera.y, camera.z), self.surface_to_center_distance)
-        except ValueError as error:
-            self.get_logger().warning(str(error), throttle_duration_sec=2.0)
-            return
         position[2] += self.center_offset_z
         now = self.get_clock().now()
         # Drop samples that are too old or from a ball that jumped elsewhere,

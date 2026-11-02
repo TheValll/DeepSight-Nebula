@@ -14,10 +14,10 @@
         <joint name="limb5_to_limb4_joint" value="0"/>
     </group_state>
     <group_state name="default" group="arm">
-        <joint name="limb1_to_base_link_joint" value="-0.035183482"/>
-        <joint name="limb2_to_limb1_joint" value="1.004011327"/>
-        <joint name="limb3_to_limb2_joint" value="1.276567527"/>
-        <joint name="limb4_to_limb3_joint" value="-1.824234736"/>
+        <joint name="limb1_to_base_link_joint" value="-0.032553170"/>
+        <joint name="limb2_to_limb1_joint" value="0.881433418"/>
+        <joint name="limb3_to_limb2_joint" value="1.247726428"/>
+        <joint name="limb4_to_limb3_joint" value="-1.800249745"/>
         <joint name="limb5_to_limb4_joint" value="-0.079692433"/>
     </group_state>
     <group_state name="open" group="gripper">

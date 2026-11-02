@@ -35,8 +35,8 @@ gripper_controller:
     joint: gripper_left_joint
     # Do not report full closure while still millimetres from the target.
     goal_tolerance: 0.0005
-    # Opening takes 1 s and closing takes 0.5 s. Confirm object contact
-    # after 0.5 s without motion before returning the arm.
+    # Opening takes 1 s; closing takes 0.25 s.
+    # Confirm object contact after 0.5 s without motion before returning the arm.
     stall_timeout: 0.5
     # A held ball prevents full closure; treat this as a completed grasp.
     allow_stalling: true

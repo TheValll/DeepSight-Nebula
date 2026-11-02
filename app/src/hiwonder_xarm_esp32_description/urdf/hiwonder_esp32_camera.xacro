@@ -1,8 +1,10 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:property name="camera_mount_xyz" value="0.0208 -0.025 0.0255"/>
-  <xacro:property name="camera_mount_rpy" value="${pi/2} 0.0 0.0"/>
+  <!-- Identified on 2026-11-02 by the arm self-calibration (checkerboard on the desk,
+       23 poses). CAD values before: xyz 0.0208 -0.025 0.0255, rpy pi/2 0 0. -->
+  <xacro:property name="camera_mount_xyz" value="0.0273 -0.0380 0.0324"/>
+  <xacro:property name="camera_mount_rpy" value="1.6007 -0.0142 -0.0494"/>
 
   <link name="camera_support_link">
     <inertial>

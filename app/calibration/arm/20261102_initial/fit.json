@@ -1,0 +1,72 @@
+{
+ "run": "/home/valentin/DeepSight-Nebula/app/calibration/arm/20261102_initial",
+ "samples": 23,
+ "report": {
+  "mod\u00e8le actuel": {
+   "train_px": 19.683842172882702,
+   "loo_px": 20.30008122460449,
+   "loo_worst_px": 36.59428565715953
+  },
+  "calibration": {
+   "train_px": 4.233654883611342,
+   "loo_px": 5.68323069951006,
+   "loo_worst_px": 10.074677751709014
+  }
+ },
+ "ros_reference": {
+  "limb1_to_base_link_joint": 0.015082,
+  "limb2_to_limb1_joint": 1.3892788814112895,
+  "limb3_to_limb2_joint": 1.5156577165815743,
+  "limb4_to_limb3_joint": -0.03687674361809433,
+  "limb5_to_limb4_joint": -0.008483
+ },
+ "scale_factor": {
+  "limb1_to_base_link_joint": 0.9476700220944803,
+  "limb2_to_limb1_joint": 0.9937660395937917,
+  "limb3_to_limb2_joint": 1.0317518385628623,
+  "limb4_to_limb3_joint": 0.9722357774820317,
+  "limb5_to_limb4_joint": 1.0
+ },
+ "camera_mount": [
+  [
+   0.9986772517252389,
+   -0.01569144305928397,
+   -0.048964533095301924,
+   0.027347381629336823
+  ],
+  [
+   -0.04940749435614219,
+   -0.02920856914374856,
+   -0.9983515207530975,
+   -0.038019527605273426
+  ],
+  [
+   0.0142353920905413,
+   0.9994501678939737,
+   -0.029945208443696747,
+   0.03240746017499751
+  ],
+  [
+   0.0,
+   0.0,
+   0.0,
+   1.0
+  ]
+ ],
+ "board": [
+  -0.05709731512916555,
+  -0.3455636405632027,
+  2.9903206786329464
+ ],
+ "wrist": {
+  "offset_rad": -0.10800674361809433,
+  "residual_mm": 5.261135324907033,
+  "held_ball_camera_m": [
+   0.0269032145479792,
+   0.027274691225725498,
+   0.08972797173261643
+  ],
+  "roll_rad": -0.07969243348136865
+ },
+ "note": "Collected on 2026-11-02 with /tmp scripts (two sweeps, 23 poses kept), refitted with calibrate_arm.py; applied by hand that day."
+}

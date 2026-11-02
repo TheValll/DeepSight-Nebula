@@ -138,6 +138,7 @@ source .venv/bin/activate   # needed by every launch that runs YOLO
 | MoveIt only | mock | `ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py` |
 | MoveIt only | real, moves | `ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py` |
 | Ball pick | real, moves | `ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py` |
+| Arm self-calibration | real, moves | `python3 app/utils/arm_calibration/calibrate_arm.py ...` (see below) |
 
 ### Detection in RViz, without the robot
 
@@ -160,34 +161,47 @@ gripper controller is loaded. The ball goal shown in RViz is the target the pick
 
 ### Ball pick
 
-Terminal 1, start the robot, the perception and the pick node:
+Terminal 1:
 
 ```bash
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+source .venv/bin/activate
 ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py
 ```
 
-Nothing moves at startup. Terminal 2, once a ball goal is visible in RViz:
+Terminal 2 (Enter = one pick, q = quit):
 
 ```bash
-ros2 service call /pick_ball std_srvs/srv/Trigger           # open, reach, close, return to default
-ros2 service call /pick_status std_srvs/srv/Trigger         # final result (JSON)
+./pick.sh
 ```
 
-`/pick_ball` only answers that the pick was accepted; `/pick_status` gives the final state.
-"Pince bloquée sur un objet" means the gripper stopped before full closure: the gripper also stops there when it
-closes empty, so check the ball visually.
-
-Other services of the pick node:
+Other commands:
 
 ```bash
-ros2 service call /approach_ball std_srvs/srv/Trigger       # reach with the gripper open, no return
-ros2 service call /prepare_pick_trial std_srvs/srv/Trigger  # move the arm to default only
-```
-
-Stop with `Ctrl+C`. `move_group` sometimes survives it; check and kill it before relaunching:
-
-```bash
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+ros2 service call /pick_ball std_srvs/srv/Trigger
+ros2 service call /pick_status std_srvs/srv/Trigger
+ros2 service call /approach_ball std_srvs/srv/Trigger
+ros2 service call /prepare_pick_trial std_srvs/srv/Trigger
+ros2 action send_goal /gripper_controller/gripper_cmd control_msgs/action/GripperCommand "{command: {position: 0.013651, max_effort: 10.0}}"
+ros2 run stereo_camera_calibration ball_pick_node --ros-args --params-file app/src/stereo_camera_calibration/config/pipeline.yaml
 pgrep -fa move_group && pkill -9 -f moveit_ros_move_group/move_group
+```
+
+### Arm self-calibration
+
+Terminal 1: `ball_pick_hardware.launch.py` (above). Terminal 2, without `.venv`:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source app/install/setup.bash
+python3 app/utils/arm_calibration/calibrate_arm.py collect
+python3 app/utils/arm_calibration/calibrate_arm.py fit
+python3 app/utils/arm_calibration/calibrate_arm.py wrist
+python3 app/utils/arm_calibration/calibrate_arm.py apply --dry-run
+python3 app/utils/arm_calibration/calibrate_arm.py apply
 ```
 
 ### Settings
@@ -203,7 +217,7 @@ The launches only pass the paths, which can be overridden as launch arguments (`
 | Argument | Default |
 |---|---|
 | `camera_device` | `/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0` |
-| `calibration_file` | `app/calibration/stereo_calib_standard.xml` |
+| `calibration_file` | `app/calibration/stereo_calib.xml` |
 | `model` | `benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt` (YOLO26n FT, class `ping_pong_ball`) |
 | `serial_port` | `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` |
 | `use_rviz` | `true` (`ball_pick_hardware` and `hardware.launch.py`) |
@@ -215,18 +229,25 @@ Servo calibration (references, scales, limits) is described in the
 
 ### Tools
 
-**Stereo calibration.** Requires a 9x6 chessboard with 25 mm squares (8x5 inner corners); change it in
-`app/src/stereo_camera_calibration/include/stereo_camera_calibration/calibration_node.hpp` if needed.
-Run from the `app` folder:
+**Stereo calibration.** Print [`damier_9x6_25mm_A4.pdf`](damier_9x6_25mm_A4.pdf) on A4 at 100 % (no
+"fit to page") and check with a ruler that 9 squares measure 225 mm: a board printed too small scales every
+distance (a 23.5 mm board gave a 63.4 mm baseline instead of about 60 mm, and depths 6 % too long).
+Glue it flat on a rigid support. Run from the `app` folder, with no other launch using the camera:
 
 ```bash
 ros2 run stereo_camera_calibration calibration_exe
 ```
 
-The tool opens camera index 0 (MJPEG 2560x720, 60 FPS). Press **S** to capture chessboard poses; once enough
-are captured, it writes `calibration/stereo_calib.xml` with the images. The pipeline uses
-`app/calibration/stereo_calib_standard.xml` (5 distortion coefficients, RMS 0.36 px); `stereo_calib.xml` is the
-older 14-coefficient calibration, kept for comparison.
+The capture folders `calibration/images/left|right` must be empty: move previous images away first. Press **S**
+in a camera window to capture a pose (20 maximum, **Q** to stop earlier): board fully visible in both images,
+still, at 20-60 cm, tilted in every direction and placed in every part of the image. The tool then writes
+`calibration/stereo_calib.xml`, used by every launch. Check the printed RMS (below 1 px) and baseline (about
+60 mm); a single bad view can spoil the result, so look for it and recalibrate without it if needed.
+
+**Desk camera correction.** The printed camera support can move when the robot is stored. At startup,
+`ball_detection_moveit` and `ball_pick_hardware` look for the same checkerboard lying flat on the desk and
+correct the camera tilt and height (`app/calibration/camera_desk_correction.yaml`, local). Without the board in
+view, this step is skipped and the previous correction is kept.
 
 **Camera anti-flicker.** With a 50 Hz grid (France), set it before recording or benchmarking; reapply it after
 reconnecting the camera:
@@ -1051,3 +1072,34 @@ These scores describe this benchmark on the RTX 5080. They still need checking o
 
 **Next steps.**
 - Improve performance and reduce processing delay.
+
+### 2026-11-02 — Calibration fixes and pick benchmark
+
+These last two days, I cleaned the code and found why the gripper missed the ball.
+
+- My checkerboard was printed too small: 23.5 mm squares instead of 25 mm. Every distance was 6% too long.
+  I printed a new board at the right size and redid the stereo calibration.
+- The camera support moves a little when I store the robot. At each startup, the robot now looks at the board
+  on the desk and corrects the camera tilt and height.
+- The arm model was wrong far from the default pose. I wrote an arm self-calibration: the arm looks at the board
+  from 20 poses, then the servo zeros, scales and camera position are corrected.
+- The gripper fingers form a small V. When closing, they pushed the ball out. Some Patafix on the fingertips fixed it.
+
+Then I ran a pick benchmark: ball on the desk, 3 directions, 4 distances, 3 picks each.
+
+```text
+Picks held / executed, seen from behind the robot
+
+Distance      Left         Centre        Right
+  27 cm    ● 100 % 2/2  ● 100 % 3/3  ● 100 % 3/3
+  25 cm    ● 100 % 3/3  ● 100 % 3/3  ○  67 % 2/3
+  23 cm    ● 100 % 3/3  ● 100 % 3/3  ● 100 % 3/3
+  20 cm    ● 100 % 3/3  ● 100 % 3/3  ● 100 % 2/2
+                \           |           /
+                 \          |          /
+                  \  +30°   |   -30°  /
+                   \        |        /
+                        [ robot ]
+```
+
+- Run the pipeline on an embedded computer.

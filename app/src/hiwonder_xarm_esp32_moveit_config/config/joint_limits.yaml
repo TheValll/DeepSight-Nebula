@@ -17,16 +17,16 @@ joint_limits:
     max_acceleration: 0.5
   limb1_to_base_link_joint:
     has_position_limits: true
-    min_position: -1.957838
-    max_position: 1.979625
+    min_position: -1.854598
+    max_position: 1.876823
     has_velocity_limits: true
     max_velocity: 2.0
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb2_to_limb1_joint:
     has_position_limits: true
-    min_position: -1.707602
-    max_position: 1.474622
+    min_position: -1.636991
+    max_position: 1.318515
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true
@@ -34,15 +34,15 @@ joint_limits:
   limb3_to_limb2_joint:
     has_position_limits: true
     min_position: -2.074000
-    max_position: 2.024116
+    max_position: 1.978110
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true
     max_acceleration: 5.0
   limb4_to_limb3_joint:
     has_position_limits: true
-    min_position: -1.850498
-    max_position: 1.581294
+    min_position: -1.824685
+    max_position: 1.368167
     has_velocity_limits: true
     max_velocity: 2.7
     has_acceleration_limits: true

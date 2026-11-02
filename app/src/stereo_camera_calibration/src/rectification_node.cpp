@@ -41,6 +41,9 @@ public:
     // Stable V4L path (/dev/v4l/by-id/...) rather than an index that changes
     // with the USB enumeration order.
     const auto camera_device = declare_parameter<std::string>("camera_device");
+    // Frame of the rectified images and depth: the camera frame corrected on the
+    // desk at startup (camera_desk_calibration), child of the URDF camera frame.
+    frame_id_ = declare_parameter<std::string>("frame_id");
     show_debug_windows_ = declare_parameter<bool>("show_debug_windows", true);
     publish_depth_color_ = declare_parameter<bool>("publish_depth_color", true);
     publish_point_cloud_ = declare_parameter<bool>("publish_point_cloud", true);
@@ -88,6 +91,7 @@ private:
   bool publish_depth_color_ = true;
   bool publish_point_cloud_ = true;
   bool publish_metrics_ = false;
+  std::string frame_id_;
   int num_disparities_ = 0;
   float min_depth_meters_ = 0.0F;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr left_image_publisher_;
@@ -366,7 +370,7 @@ private:
 
       std_msgs::msg::Header image_header;
       image_header.stamp = capture_stamp;
-      image_header.frame_id = "camera_left_optical_frame";
+      image_header.frame_id = frame_id_;
       left_image_publisher_->publish(
         *cv_bridge::CvImage(
           image_header, sensor_msgs::image_encodings::BGR8, left_rectified).toImageMsg());

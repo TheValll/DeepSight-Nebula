@@ -12,8 +12,28 @@
 
 stereo_rectification_node:
   ros__parameters:
+    # Published by camera_desk_calibration below the URDF camera frame.
+    frame_id: camera_left_measured_optical_frame
     # Must be divisible by 16. Computed on the 640x360 depth image.
     num_disparities: 224
+
+camera_desk_calibration:
+  ros__parameters:
+    base_frame: base_link
+    # Desk top in base_link: the suction cups raise base_link about 5 mm.
+    desk_height: -0.005
+    # Thickness of the checkerboard support lying on the desk (0 for paper).
+    board_thickness: 0.0
+    # Same board as the stereo calibration: 9x6 squares of 25 mm.
+    board_inner_columns: 8
+    board_inner_rows: 5
+    board_square_size: 0.025
+    # Without the board in view after this time, the calibration is skipped.
+    search_timeout: 20.0
+    samples: 10
+    # Larger corrections are refused (board not flat, wrong board...).
+    max_tilt_correction_deg: 10.0
+    max_height_correction: 0.03
 
 yolo_detection_node:
   ros__parameters:
@@ -26,14 +46,18 @@ yolo_detection_node:
     prompt: ""
     maximum_depth: 2.0
     ball_diameter: 0.04
+    # The depth is the median over the inner 60 % of the box (YOLO26n has no mask).
+    # Geometry alone predicts 18 mm from that median to the centre of a 40 mm ball,
+    # but SGBM measures the small ball deeper than its front surface. Measured on
+    # 2026-11-02 with the desk checkerboard as reference (ball centre 20 mm from the
+    # board plane): 3.0 mm at 0.25 m, 8.5 mm at 0.30 m, 5.0 mm at 0.33 m. No trend
+    # with distance (stereo noise): mean value, about +-2.5 mm on the ball height.
+    surface_to_center_depth: 0.0055
 
 ball_goal_preview_node:
   ros__parameters:
     target_frame: base_link
-    # Horizontal shift from the measured ball surface toward its centre, along
-    # the camera -> ball direction (0 = target on the measured surface point).
-    surface_to_center_distance: 0.0
-    # Vertical shift of the target in base_link.
+    # Vertical shift of the target in base_link (the detection is already the centre).
     center_offset_z: 0.0
     # Median of the last samples, all younger than sample_max_age seconds.
     sample_count: 5
@@ -43,8 +67,9 @@ ball_pick_node:
   ros__parameters:
     base_frame: base_link
     tip_link: gripper_tcp_link
-    # Radius (m) of the MoveIt goal sphere around the target.
-    position_tolerance: 0.003
+    # Radius (m) of the MoveIt goal sphere around the target. 3 mm left the ball
+    # about 4 mm closer to one finger (2026-11-02); 1 mm after the self-calibration.
+    position_tolerance: 0.001
     # The pick is refused when the last goal is older than this (s).
     goal_max_age: 1.0
     # 3D distance from base_link origin. Beyond about 0.30 m the servo 1
@@ -56,10 +81,15 @@ ball_pick_node:
     # Gentle acceleration and deceleration under camera load.
     acceleration_scaling: 0.05
     gripper_open_position: 0.013651
-    gripper_closed_position: -0.013651
+    # Just beyond the contact with a 40 mm ball (about -0.005 with the Patafix pads):
+    # the servo squeezes gently instead of driving to full closure (-0.013651).
+    gripper_closed_position: -0.008
     gripper_max_effort: 10.0
     # Grasp offsets in base_link, relative to the base -> ball direction.
-    grasp_radial_offset: 0.0
-    # Trial from the measured 60 mm opening and 40 mm ball: 60/2 - 40/2 = 10 mm
-    # toward the arm's left, seen from the base toward the ball.
-    grasp_lateral_offset: 0.010
+    # Radial: the fingers closed behind the ball centre and pushed it out
+    # (filmed picks, 2026-11-02): go 8 mm further.
+    grasp_radial_offset: 0.008
+    # Toward the arm's left, seen from the base toward the ball (= toward the right
+    # finger). The arm ended about 3 mm to the right of the target in two picks
+    # (servo tracking error, 2026-11-02): compensate it.
+    grasp_lateral_offset: 0.003

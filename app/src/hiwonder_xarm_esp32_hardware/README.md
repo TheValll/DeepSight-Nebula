@@ -12,27 +12,32 @@ joint = ros_reference + direction * (raw - raw_reference) * units_per_raw
 ```
 
 The nominal servo scale is `4.1887902047863905 / 1000` radians per raw unit
-(240° per 1000 units). The real servos turn slightly more. I measured each
-pitch joint alone against a fixed checkerboard seen by the camera:
+(240° per 1000 units). Scales and zero references were identified on 2026-11-02
+by an arm self-calibration: the arm visited 23 poses looking at a checkerboard
+lying on the desk, and the shoulder/elbow zeros, the joint scales and the camera
+mount were fitted so that the board stays at the same place (leave-one-out error
+5.7 px instead of 20.3 px). The wrist zero comes from a ball held in the gripper
+and measured by the stereo camera.
 
 | Servo | Joint | Scale factor | Radians per raw unit |
 |---:|---|---:|---:|
-| 5 | `limb2_to_limb1_joint` | 1.070 | 0.0044820 |
-| 4 | `limb3_to_limb2_joint` | 1.056 | 0.0044234 |
-| 3 | `limb4_to_limb3_joint` | 1.045 | 0.0043773 |
+| 6 | `limb1_to_base_link_joint` | 0.9477 | 0.0039697 |
+| 5 | `limb2_to_limb1_joint` | 0.9938 | 0.0041628 |
+| 4 | `limb3_to_limb2_joint` | 1.0318 | 0.0043220 |
+| 3 | `limb4_to_limb3_joint` | 0.9722 | 0.0040723 |
 
-The base and wrist rotation keep the nominal value. The gripper uses a linear
+The wrist rotation keeps the nominal value. The gripper uses a linear
 approximation of `0.03 / 556` metres per raw unit.
 
-The current references come from the pose measured in RViz:
+Zero references (base and wrist rotation: pose measured in RViz):
 
 | Servo | Joint | Raw reference | ROS reference | Safe raw range |
 |---:|---|---:|---:|---:|
 | 1 | `gripper_left_joint` | 528 | 0.0 m | 270–786 |
 | 2 | `limb5_to_limb4_joint` | 512 | -0.008483 rad | 141–840 |
-| 3 | `limb4_to_limb3_joint` | 503 | 0.071130 rad | 61–858 |
-| 4 | `limb3_to_limb2_joint` | 863 | 1.550816 rad | 20–980 |
-| 5 | `limb2_to_limb1_joint` | 856 | 1.550816 rad | 119–849 |
+| 3 | `limb4_to_limb3_joint` | 503 | -0.036851 rad | 61–858 |
+| 4 | `limb3_to_limb2_joint` | 863 | 1.515678 rad | 20–980 |
+| 5 | `limb2_to_limb1_joint` | 856 | 1.389281 rad | 119–849 |
 | 6 | `limb1_to_base_link_joint` | 501 | 0.015082 rad | 20–980 |
 
 Every outgoing value is clamped first to the protocol range `0..1000` and

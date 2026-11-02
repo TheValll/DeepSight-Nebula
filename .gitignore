@@ -65,5 +65,8 @@ images
 !/benchmarks/yolo/results/**/*.csv
 /benchmarks/yolo/videos/
 
+# Camera correction measured on the desk at each startup (local state)
+/app/calibration/camera_desk_correction.yaml
+
 # CAD archive
 fusion360_xarm32.zip

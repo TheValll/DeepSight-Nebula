@@ -36,6 +36,12 @@ install(PROGRAMS
 )
 
 install(PROGRAMS
+  scripts/camera_desk_calibration_node.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME camera_desk_calibration
+)
+
+install(PROGRAMS
   scripts/ball_goal_preview_node.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME ball_goal_preview_node
@@ -45,6 +51,12 @@ install(PROGRAMS
   scripts/ball_pick_node.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME ball_pick_node
+)
+
+install(PROGRAMS
+  scripts/pick_client.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME pick
 )
 
 install(PROGRAMS

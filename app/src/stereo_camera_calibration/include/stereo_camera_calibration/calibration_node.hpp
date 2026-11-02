@@ -16,26 +16,41 @@ namespace fs = std::filesystem;
 const string LEFT_FRAME_PATH = "calibration/images/left"; 
 const string RIGHT_FRAME_PATH = "calibration/images/right";
 
-const int CHECKERBOARD_WIDTH = 8;
-const int CHECKERBOARD_HEIGHT = 5;
-const float SQUARE_SIZE = 0.025f;
+// Printed board: damier_9x6_25mm_A4.pdf at the repository root, printed at 100 %.
+// Check with a ruler that 9 squares measure 225 mm before calibrating.
+const int CHECKERBOARD_WIDTH = 8;   // inner corners
+const int CHECKERBOARD_HEIGHT = 5;  // inner corners
+const float SQUARE_SIZE = 0.025f;   // metres
+const string CAMERA_DEVICE =
+  "/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0";
+const string OUTPUT_FILE = "calibration/stereo_calib.xml";
 const Size boardSize(CHECKERBOARD_WIDTH, CHECKERBOARD_HEIGHT);
 
-void create_folders();
+bool create_folders();
 void camera_stereo_calibration();
 void capture_frames();
 
 class CalibrationNode: public rclcpp::Node{
     public:
-        CalibrationNode(): Node("calibrarion_node"){
-            create_folders();
+        CalibrationNode(): Node("calibration_node"){
+            if (!create_folders()) {
+                return;
+            }
             capture_frames();
             camera_stereo_calibration();
         }
     private :
 };
 
-void create_folders(){
+bool create_folders(){
+    // Never mix new captures with images of a previous session or board.
+    for (const auto & path : {LEFT_FRAME_PATH, RIGHT_FRAME_PATH}) {
+        if (fs::exists(path) && !fs::is_empty(path)) {
+            cerr << "Error : " << path << " is not empty. Move the previous images away "
+                 << "before a new calibration." << endl;
+            return false;
+        }
+    }
     try {
         if (!fs::exists(LEFT_FRAME_PATH)) {
             fs::create_directories(LEFT_FRAME_PATH);
@@ -47,7 +62,9 @@ void create_folders(){
         }
     } catch (const fs::filesystem_error& e) {
         cerr << "Error with folders creation : " << e.what() << endl;
+        return false;
     }
+    return true;
 }
 
 void camera_stereo_calibration(){
@@ -125,19 +142,21 @@ void camera_stereo_calibration(){
     cout << "Matrix (K2):\n" << K2 << endl;
     cout << "Translation (T):\n" << T << endl;
     cout << "Rotation (R):\n" << R << endl;
+    cout << "Pairs used: " << objpoints.size() << " ; baseline: " << norm(T) * 1000.0
+         << " mm (ELP nominal: 60 mm)" << endl;
 
-    FileStorage fs("calibration/stereo_calib.xml", FileStorage::WRITE);
+    FileStorage fs(OUTPUT_FILE, FileStorage::WRITE);
     fs << "K1" << K1 << "D1" << D1;
     fs << "K2" << K2 << "D2" << D2;
     fs << "R" << R << "T" << T;
     fs << "RMS" << rms;
     fs.release();
 
-    cout << "Settings saved in 'calibration/stereo_calib.xml'" << endl;
+    cout << "Settings saved in '" << OUTPUT_FILE << "'" << endl;
 }
 
 void capture_frames(){
-    VideoCapture cap(0, CAP_V4L2);
+    VideoCapture cap(CAMERA_DEVICE, CAP_V4L2);
     
     cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
     cap.set(CAP_PROP_FRAME_WIDTH, 2560);

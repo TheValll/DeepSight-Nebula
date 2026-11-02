@@ -7,12 +7,15 @@
       name="initial_positions"
       value="${xacro.load_yaml(initial_positions_file)['initial_positions']}"/>
     <xacro:property name="radians_per_raw" value="${4.1887902047863905 / 1000.0}"/>
-    <!-- Servos turn more than the nominal 240 deg per 1000 raw units. Scales measured
-         on 2026-10-16 by moving one joint and measuring the camera rotation on a fixed
-         checkerboard. The base and wrist rotation keep the nominal value. -->
-    <xacro:property name="shoulder_radians_per_raw" value="${radians_per_raw * 1.070}"/>
-    <xacro:property name="elbow_radians_per_raw" value="${radians_per_raw * 1.056}"/>
-    <xacro:property name="wrist_radians_per_raw" value="${radians_per_raw * 1.045}"/>
+    <!-- Joint scales and zero references identified on 2026-11-02 by an arm
+         self-calibration: 23 arm poses looking at a checkerboard lying on the desk
+         (camera mount, shoulder/elbow zeros and all scales; leave-one-out error
+         5.7 px instead of 20.3 px), plus the wrist zero from a ball held in the
+         gripper. Replaces the per-joint checkerboard scales of 2026-10-16. -->
+    <xacro:property name="base_radians_per_raw" value="${radians_per_raw * 0.9477}"/>
+    <xacro:property name="shoulder_radians_per_raw" value="${radians_per_raw * 0.9938}"/>
+    <xacro:property name="elbow_radians_per_raw" value="${radians_per_raw * 1.0318}"/>
+    <xacro:property name="wrist_radians_per_raw" value="${radians_per_raw * 0.9722}"/>
     <xacro:property name="gripper_units_per_raw" value="${0.03 / 556.0}"/>
 
     <ros2_control name="${name}" type="system">
@@ -43,14 +46,14 @@
         <param name="servo_id">6</param>
         <param name="raw_reference">501</param>
         <param name="ros_reference">0.015082</param>
-        <param name="units_per_raw">${radians_per_raw}</param>
+        <param name="units_per_raw">${base_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">20</param>
         <param name="raw_max">980</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-2.020670</param>
-          <param name="max">2.042456</param>
+          <param name="min">-1.914142</param>
+          <param name="max">1.936367</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb1_to_base_link_joint']}</param>
@@ -61,15 +64,15 @@
       <joint name="limb2_to_limb1_joint">
         <param name="servo_id">5</param>
         <param name="raw_reference">856</param>
-        <param name="ros_reference">1.550816</param>
+        <param name="ros_reference">1.389281</param>
         <param name="units_per_raw">${shoulder_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">119</param>
         <param name="raw_max">849</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.774832</param>
-          <param name="max">1.541852</param>
+          <param name="min">-1.699431</param>
+          <param name="max">1.380956</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb2_to_limb1_joint']}</param>
@@ -80,15 +83,15 @@
       <joint name="limb3_to_limb2_joint">
         <param name="servo_id">4</param>
         <param name="raw_reference">863</param>
-        <param name="ros_reference">1.550816</param>
+        <param name="ros_reference">1.515678</param>
         <param name="units_per_raw">${elbow_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">20</param>
         <param name="raw_max">980</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-2.094</param>
-          <param name="max">2.090466</param>
+          <param name="min">-2.094000</param>
+          <param name="max">2.042937</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb3_to_limb2_joint']}</param>
@@ -99,15 +102,15 @@
       <joint name="limb4_to_limb3_joint">
         <param name="servo_id">3</param>
         <param name="raw_reference">503</param>
-        <param name="ros_reference">0.071130</param>
+        <param name="ros_reference">-0.036851</param>
         <param name="units_per_raw">${wrist_radians_per_raw}</param>
         <param name="direction">1</param>
         <param name="raw_min">61</param>
         <param name="raw_max">858</param>
         <param name="hardware_io_enabled">true</param>
         <command_interface name="position">
-          <param name="min">-1.885517</param>
-          <param name="max">1.646953</param>
+          <param name="min">-1.857265</param>
+          <param name="max">1.429254</param>
         </command_interface>
         <state_interface name="position">
           <param name="initial_value">${initial_positions['limb4_to_limb3_joint']}</param>
@@ -143,8 +146,9 @@
         <param name="raw_min">270</param>
         <param name="raw_max">786</param>
         <param name="movement_duration_ms">1000</param>
-        <!-- Closing duration is independent of opening and arm movements. -->
-        <param name="closing_movement_duration_ms">500</param>
+        <!-- Closing duration is independent of opening and arm movements: fast
+             enough that the ball has no time to slide away, without slamming it. -->
+        <param name="closing_movement_duration_ms">250</param>
         <param name="hardware_io_enabled">${gripper_hardware_io_enabled}</param>
         <command_interface name="position">
           <param name="min">-0.013921</param>

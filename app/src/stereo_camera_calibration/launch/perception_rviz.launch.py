@@ -13,7 +13,8 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
-CALIBRATION = 'app/calibration/stereo_calib_standard.xml'
+CALIBRATION = 'app/calibration/stereo_calib.xml'
+CORRECTION = 'app/calibration/camera_desk_correction.yaml'
 WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
 CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
 
@@ -46,12 +47,22 @@ def generate_launch_description():
             executable='joint_state_publisher_gui',
             # Initial sliders = the SRDF `default` pose of the arm.
             parameters=[{
-                'zeros.limb1_to_base_link_joint': -0.035183482,
-                'zeros.limb2_to_limb1_joint': 1.004011327,
-                'zeros.limb3_to_limb2_joint': 1.276567527,
-                'zeros.limb4_to_limb3_joint': -1.824234736,
+                'zeros.limb1_to_base_link_joint': -0.032553170,
+                'zeros.limb2_to_limb1_joint': 0.881433418,
+                'zeros.limb3_to_limb2_joint': 1.247726428,
+                'zeros.limb4_to_limb3_joint': -1.800249745,
                 'zeros.limb5_to_limb4_joint': -0.079692433,
                 'zeros.gripper_left_joint': 0.0,
+            }],
+            output='screen',
+        ),
+        # Joint sliders are not the real pose: only reuse the saved correction.
+        Node(
+            package='stereo_camera_calibration',
+            executable='camera_desk_calibration',
+            parameters=[pipeline, {
+                'correction_file': str(root / CORRECTION),
+                'calibrate': False,
             }],
             output='screen',
         ),

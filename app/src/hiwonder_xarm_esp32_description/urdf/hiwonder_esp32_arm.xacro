@@ -51,7 +51,7 @@
     <parent link="base_link"/>
     <child link="limb1_link"/>
     <axis xyz="0.0 0.0 1.0"/>
-    <limit lower="-2.020670" upper="2.042456" effort="10" velocity="2.0"/>
+    <limit lower="-1.914142" upper="1.936367" effort="10" velocity="2.0"/>
   </joint>
 
   <link name="limb2_link">
@@ -138,7 +138,7 @@
     <parent link="limb3_link"/>
     <child link="limb4_link"/>
     <axis xyz="-1.0 0.0012 0.0002"/>
-    <limit lower="-1.885517" upper="1.646953" effort="17" velocity="2.7"/>
+    <limit lower="-1.857265" upper="1.429254" effort="17" velocity="2.7"/>
   </joint>
 
   <!-- ==================== WRIST (limb5 = gripper base) ==================== -->

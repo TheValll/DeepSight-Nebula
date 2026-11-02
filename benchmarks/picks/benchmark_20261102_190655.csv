@@ -1,0 +1,3 @@
+time,direction,distance_cm,trial,seen_distance_cm,seen_direction_deg,state,verdict,gripper,duration_s,target,message
+2026-11-02T19:07:49,droite,20,1,20.1,-28.9,succeeded,tenue,-0.004100719424460431,12.0,"{""x"": -0.09863880549710476, ""y"": -0.18418678406079522, ""z"": 0.019148927627064438}",Prise terminee: Pince bloquee sur un objet. Bras revenu en default.
+2026-11-02T19:08:06,droite,20,2,20.9,-30.1,failed,échec,0.013111510791366906,1.0,"{""x"": -0.1055682347861012, ""y"": -0.1887635147204399, ""z"": 0.01767616915439496}","La pince ne confirme pas son ouverture (position=0.0131, stalled=True)."
