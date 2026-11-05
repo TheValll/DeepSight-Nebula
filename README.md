@@ -271,8 +271,7 @@ ros2 run hiwonder_xarm_esp32_hardware servo_calibration_cli read --id 3 --count 
 ros2 launch hiwonder_xarm_esp32_moveit_config calibration_rviz.launch.py
 ```
 
-**Pipeline latency benchmark** and **ball dataset / fine-tuning tools**: see
-[benchmarks/pipeline/README.md](benchmarks/pipeline/README.md) and
+**Ball dataset / fine-tuning tools**: see
 [app/utils/vision/README.md](app/utils/vision/README.md).
 
 ---
@@ -1073,7 +1072,7 @@ These scores describe this benchmark on the RTX 5080. They still need checking o
 **Next steps.**
 - Improve performance and reduce processing delay.
 
-### 2026-11-02 — Calibration fixes and pick benchmark
+### 2026-11-02 — Calibration fixes
 
 These last two days, I cleaned the code and found why the gripper missed the ball.
 
@@ -1085,21 +1084,8 @@ These last two days, I cleaned the code and found why the gripper missed the bal
   from 20 poses, then the servo zeros, scales and camera position are corrected.
 - The gripper fingers form a small V. When closing, they pushed the ball out. Some Patafix on the fingertips fixed it.
 
-Then I ran a pick benchmark: ball on the desk, 3 directions, 4 distances, 3 picks each.
+**Next steps.**
 
-```text
-Picks held / executed, seen from behind the robot
-
-Distance      Left         Centre        Right
-  27 cm    ● 100 % 2/2  ● 100 % 3/3  ● 100 % 3/3
-  25 cm    ● 100 % 3/3  ● 100 % 3/3  ○  67 % 2/3
-  23 cm    ● 100 % 3/3  ● 100 % 3/3  ● 100 % 3/3
-  20 cm    ● 100 % 3/3  ● 100 % 3/3  ● 100 % 2/2
-                \           |           /
-                 \          |          /
-                  \  +30°   |   -30°  /
-                   \        |        /
-                        [ robot ]
-```
-
+- Physical benchmark
 - Run the pipeline on an embedded computer.
+- Benchmark the complete pipeline with the current configuration.
