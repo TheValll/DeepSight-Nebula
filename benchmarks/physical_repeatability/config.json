@@ -1,0 +1,221 @@
+{
+  "schema": "physical_repeatability_config/v1",
+  "cycles": 50,
+  "velocity_scaling": 1.0,
+  "acceleration_scaling": 0.1,
+  "target_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "gripper_id": 8,
+  "dictionary": "DICT_4X4_50",
+  "marker_sizes_mm": {
+    "0": 40,
+    "1": 40,
+    "2": 40,
+    "3": 40,
+    "4": 40,
+    "5": 40,
+    "6": 40,
+    "7": 40,
+    "8": 30
+  },
+  "external_camera": {
+    "device": "/dev/v4l/by-id/usb-046d_Logitech_StreamCam_5DD51916-video-index0",
+    "resolution": [
+      1920,
+      1080
+    ],
+    "fourcc": "MJPG",
+    "fps": 30,
+    "calibration": "calibration/logitech_1920x1080.json"
+  },
+  "robot_camera": {
+    "device": "/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0",
+    "resolution": [
+      2560,
+      720
+    ],
+    "fourcc": "MJPG",
+    "fps": 30,
+    "stereo_calibration": "../../app/calibration/stereo_calib.xml",
+    "pair_every_n_external_frames": 5,
+    "pair_timeout_s": 0.5,
+    "max_frame_age_s": 0.5,
+    "max_pair_skew_s": 0.1
+  },
+  "tcp_calibration": "calibration/marker8_to_tcp.json",
+  "provisional_guard_tolerances": {
+    "limb5_to_limb4_joint": 0.01,
+    "gripper_left_joint": 0.0015
+  },
+  "ball": {
+    "diameter_m": 0.04,
+    "crosscheck_every_n_valid_frames": 5
+  },
+  "settling_s": 1.0,
+  "valid_frames": 20,
+  "min_valid_frames": 10,
+  "capture_timeout_s": 8.0,
+  "max_reprojection_error_px": 1.5,
+  "min_marker_edge_px": 20,
+  "min_pose_solution_error_gap_px": 0.1,
+  "orientation_enabled": false,
+  "detector_parameters": {},
+  "fallback_detector_parameters": {
+    "adaptiveThreshWinSizeMin": 3,
+    "adaptiveThreshWinSizeMax": 151,
+    "adaptiveThreshWinSizeStep": 4,
+    "adaptiveThreshConstant": 3.0
+  },
+  "motion_execution": "move_group",
+  "max_transit_roll_excursion_rad": null,
+  "motion_timeout_s": 45,
+  "planning_time_s": 4.0,
+  "goal_joint_tolerance_rad": 0.005,
+  "max_joint_position_error_rad": 0.05,
+  "joint_agreement_timeout_s": 2.0,
+  "joint_state_max_age_s": 0.5,
+  "joint_state_recovery_timeout_s": 60.0,
+  "max_consecutive_camera_failure_visits": 3,
+  "base_frame": "base_link",
+  "tcp_frame": "gripper_tcp_link",
+  "reference_name": "default",
+  "storage": {
+    "image_format": "png",
+    "png_compression": 1,
+    "onboard_rectified_format": "jpg",
+    "jpeg_quality": 95,
+    "queue_size": 64,
+    "max_submit_block_s": 30,
+    "min_free_gb": 5
+  },
+  "workspace_validated": true,
+  "obstacles": [
+    {
+      "id": "benchmark_carton_keepout",
+      "center_m": [
+        0.030065610582543197,
+        -0.8065303455668268,
+        0.3
+      ],
+      "size_m": [
+        1.2,
+        1.0,
+        0.7
+      ],
+      "rotation_xyzw": [
+        0,
+        0,
+        0.018629154678437787,
+        0.9998264622403064
+      ],
+      "provenance": {
+        "kind": "conservative exclusion volume, not measured carton dimensions",
+        "observed_marker_ids": [
+          0,
+          4,
+          5,
+          6
+        ],
+        "outward_normal_base": [
+          -0.03725184363333981,
+          0.9993059091919337,
+          0.0
+        ],
+        "front_boundary_m": -0.307090539691704,
+        "forward_margin_m": 0.04
+      }
+    }
+  ],
+  "targets_provenance": "Frozen observation poses physically exercised at velocity 0.5 and 1.0. Six cycles at velocity 1.0 completed with successful motions and returns; some camera measurements were incomplete.",
+  "targets": {
+    "0": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": 0.255691645394904,
+        "limb2_to_limb1_joint": -0.8979211126086629,
+        "limb3_to_limb2_joint": -0.2473951779338323,
+        "limb4_to_limb3_joint": -1.228476655383579,
+        "limb5_to_limb4_joint": -0.07970243299999998
+      }
+    },
+    "1": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": 0.39011012324870076,
+        "limb2_to_limb1_joint": 0.7159245093622068,
+        "limb3_to_limb2_joint": 1.454974535762033,
+        "limb4_to_limb3_joint": -1.8246845000708223,
+        "limb5_to_limb4_joint": -0.07969006652300556
+      }
+    },
+    "2": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": -0.1678360050923717,
+        "limb2_to_limb1_joint": 0.7658399778278985,
+        "limb3_to_limb2_joint": 1.2825757293723148,
+        "limb4_to_limb3_joint": -1.8246849767414002,
+        "limb5_to_limb4_joint": -0.079692433
+      }
+    },
+    "3": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": -0.2934656804087941,
+        "limb2_to_limb1_joint": 0.8328503818173093,
+        "limb3_to_limb2_joint": 1.3190920164184512,
+        "limb4_to_limb3_joint": -1.824684997040961,
+        "limb5_to_limb4_joint": -0.079692433
+      }
+    },
+    "4": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": 0.0732090073761947,
+        "limb2_to_limb1_joint": -0.6447177857888532,
+        "limb3_to_limb2_joint": 1.5782917531610916,
+        "limb4_to_limb3_joint": 0.2642390401592371,
+        "limb5_to_limb4_joint": -0.07970243299999998
+      }
+    },
+    "5": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": -0.15474867283419952,
+        "limb2_to_limb1_joint": -1.26232957688513,
+        "limb3_to_limb2_joint": -0.7005689755881233,
+        "limb4_to_limb3_joint": -1.3671629817141766,
+        "limb5_to_limb4_joint": -0.07970243299999998
+      }
+    },
+    "6": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": -0.45402223042876166,
+        "limb2_to_limb1_joint": -1.2991862665652825,
+        "limb3_to_limb2_joint": 0.03330463913893488,
+        "limb4_to_limb3_joint": -0.6617684062960041,
+        "limb5_to_limb4_joint": -0.07968243300000001
+      }
+    },
+    "7": {
+      "validated": true,
+      "joints": {
+        "limb1_to_base_link_joint": 0.4189061581021041,
+        "limb2_to_limb1_joint": 0.8692246852334804,
+        "limb3_to_limb2_joint": 1.262141293078289,
+        "limb4_to_limb3_joint": -1.8103237968997343,
+        "limb5_to_limb4_joint": -0.079692433
+      }
+    }
+  },
+  "detector_parameters_provenance": "2026-11-05 root: primary pass uses OpenCV 4.6 default ArUco parameters. Offline re-detection of 569 saved external frames from sessions 20261105T193537 and 20261105T193958: target+marker8 found in 519 frames vs 452 with the previous primary parameters (adaptiveThreshWinSizeMax 63, step 4, constant 7), ID5 82/82 vs 42/82. Fallback parameters unchanged."
+}

@@ -56,6 +56,12 @@ images
 # Downloaded benchmark model assets
 /benchmarks/yolo/models/
 
+# Local physical robot benchmark recordings and temporary experiments
+/benchmarks/physical_repeatability/sessions/
+/benchmarks/physical_repeatability/calibration/captures/
+/tmp/
+/aruco_9_A4.pdf
+
 # Local fine-tuning checkpoints and logs (large files)
 # Runtime launches load benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt
 /benchmarks/finetuning/

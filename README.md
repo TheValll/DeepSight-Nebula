@@ -139,6 +139,7 @@ source .venv/bin/activate   # needed by every launch that runs YOLO
 | MoveIt only | real, moves | `ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py` |
 | Ball pick | real, moves | `ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py` |
 | Arm self-calibration | real, moves | `python3 app/utils/arm_calibration/calibrate_arm.py ...` (see below) |
+| Physical repeatability benchmark | real, moves | `./benchmarks/physical_repeatability/run.sh --help` |
 
 ### Detection in RViz, without the robot
 
@@ -248,6 +249,32 @@ still, at 20-60 cm, tilted in every direction and placed in every part of the im
 `ball_detection_moveit` and `ball_pick_hardware` look for the same checkerboard lying flat on the desk and
 correct the camera tilt and height (`app/calibration/camera_desk_correction.yaml`, local). Without the board in
 view, this step is skipped and the previous correction is kept.
+
+To start the real robot, use `ball_pick_hardware.launch.py` as above (`use_rviz:=false` for no GUI).
+Once MoveIt reports `You can start planning now!`, return the arm to `default` from a second prepared terminal:
+
+```bash
+ros2 service call /prepare_pick_trial std_srvs/srv/Trigger '{}'
+ros2 service call /pick_status std_srvs/srv/Trigger '{}'
+```
+
+The first response only confirms that the movement was accepted. Wait until `/pick_status` reports
+`busy: false` and `Bras revenu en default` before recalibrating; this command moves the arm without picking a ball.
+Keep the complete checkerboard visible and flat on the desk. The automatic search lasts 20 seconds and needs
+10 valid images, so it can expire before the initial movement finishes. To repeat it with the arm stationary,
+stop the existing `camera_desk_calibration` process (find its PID with
+`pgrep -af '/stereo_camera_calibration/camera_desk_calibration'`, then `kill -INT <PID>`), and run:
+
+```bash
+ros2 run stereo_camera_calibration camera_desk_calibration --ros-args \
+  --params-file app/src/stereo_camera_calibration/config/pipeline.yaml \
+  -p calibrate:=true \
+  -p correction_file:="$PWD/app/calibration/camera_desk_correction.yaml"
+```
+
+Leave this node running to serve the corrected transform. Success is confirmed by
+`Caméra recalée sur le bureau` and a new date in the correction file. A timeout or a refused correction keeps
+the previous calibration.
 
 **Camera anti-flicker.** With a 50 Hz grid (France), set it before recording or benchmarking; reapply it after
 reconnecting the camera:

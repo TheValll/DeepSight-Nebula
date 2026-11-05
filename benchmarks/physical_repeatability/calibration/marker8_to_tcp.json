@@ -1,0 +1,75 @@
+{
+  "date": "2026-11-05T18:42:09.822192+00:00",
+  "matrix": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.03788645574943958
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      -0.01600031832062765
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      -0.05498278859339664
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "provenance": "External calibrated Logitech, marker8 PnP and known-radius orange sphere tangent-cone fits; median of 40 actual camera frames",
+  "definition": "Operational TCP origin = center of held 40 mm ping-pong ball at recorded gripper opening",
+  "orientation_calibrated": false,
+  "axes_convention": "TCP axes aligned with marker by convention; only origin calibrated",
+  "required_joint_positions": {
+    "limb5_to_limb4_joint": -0.07969243348136865,
+    "gripper_left_joint": -0.004370503597122302
+  },
+  "joint_tolerances": {
+    "limb5_to_limb4_joint": 0.03,
+    "gripper_left_joint": 0.001
+  },
+  "mount_assumption": "Marker mounted on camera support upstream of wrist roll; fixed roll and gripper opening required; downstream roll errors not independently observed",
+  "sphere_diameter_m": 0.04,
+  "sphere_diameter_source": "Nominal 40 mm ping-pong ball; not independently measured with calipers",
+  "external_calibration_file": "logitech_1920x1080.json",
+  "temporal_quality": {
+    "valid_frames": 40,
+    "single_frame_std_xyz_mm": [
+      0.30215909674809815,
+      3.3437996227013707,
+      3.5285579448933495
+    ],
+    "bootstrap_median_ci95_mm": [
+      [
+        37.786114995445054,
+        -16.858534180833328,
+        -55.85780261031778
+      ],
+      [
+        37.97242724337632,
+        -15.0102963272844,
+        -53.92167984182942
+      ]
+    ],
+    "split_median_difference_mm": 0.35818902950570447,
+    "note": "Provisional single-frame 3 mm std gate failed; median aggregate checked instead. Multi-pose validation still required."
+  },
+  "multi_pose_verified": false,
+  "validation_tolerance_mm": 8.0,
+  "limitations": [
+    "Origin estimate, not full 6D TCP calibration",
+    "Absolute accuracy not independently established",
+    "Requires fixed wrist roll and constant grip/payload",
+    "Multi-pose sphere cross-check pending"
+  ]
+}
