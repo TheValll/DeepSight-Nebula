@@ -1116,3 +1116,41 @@ These last two days, I cleaned the code and found why the gripper missed the bal
 - Physical benchmark
 - Run the pipeline on an embedded computer.
 - Benchmark the complete pipeline with the current configuration.
+
+### 2026-11-05 — Physical positioning repeatability
+
+Today, I tested the physical repeatability of the robot.
+I used **7 target poses** with ArUco IDs **0, 1, 2, 4, 5, 6 and 7**.
+I repeated each pose **20 times**, for a total of **140 measurements**.
+
+The goal was simple: check if the robot can return to the same physical position several times.
+I used a fixed **Logitech StreamCam** at **1920 × 1080**.
+A **30 mm ArUco marker (ID8)** was fixed on the robot, and each target position used a fixed **40 mm ArUco marker**.
+
+For each target, the robot followed this sequence:
+
+```text id="f6k3d2"
+default
+→ target
+→ wait 1 s
+→ measure
+→ default
+```
+
+| Pose | Mean X (mm) | Mean Y (mm) | Mean Z (mm) | Mean 3D deviation (mm) | P95 (mm) | Max (mm) |
+|---|---:|---:|---:|---:|---:|---:|
+| ID0 | 53.041 | -58.159 | 105.021 | 2.087 | 3.654 | 4.058 |
+| ID1 | 42.573 | -150.064 | 75.797 | 0.697 | 1.216 | 2.236 |
+| ID2 | 67.084 | -190.489 | 104.059 | 2.029 | 2.968 | 3.386 |
+| ID4 | 56.304 | -37.225 | 124.032 | 3.150 | 5.159 | 5.168 |
+| ID5 | 27.217 | -57.311 | 114.249 | 1.728 | 3.526 | 5.158 |
+| ID6 | 9.559 | -60.259 | 129.515 | 2.423 | 4.224 | 4.292 |
+| ID7 | 75.967 | -270.948 | 145.280 | 1.205 | 2.217 | 2.460 |
+
+
+### Limitations
+
+This measurement also includes some error from the Logitech camera and ArUco detection.
+The marker-to-TCP calibration is still provisional.
+
+This benchmark is **inspired by ISO 9283**, but it is not a full ISO 9283 test.

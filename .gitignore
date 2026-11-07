@@ -57,7 +57,10 @@ images
 /benchmarks/yolo/models/
 
 # Local physical robot benchmark recordings and temporary experiments
-/benchmarks/physical_repeatability/sessions/
+/benchmarks/physical_repeatability/sessions/**
+# Preserve the original CSV exports of the retained experiment.
+!/benchmarks/physical_repeatability/sessions/20261105T204559_20cycles/
+!/benchmarks/physical_repeatability/sessions/20261105T204559_20cycles/*.csv
 /benchmarks/physical_repeatability/calibration/captures/
 /tmp/
 /aruco_9_A4.pdf
