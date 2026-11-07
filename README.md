@@ -1127,6 +1127,8 @@ The goal was simple: check if the robot can return to the same physical position
 I used a fixed **Logitech StreamCam** at **1920 × 1080**.
 A **30 mm ArUco marker (ID8)** was fixed on the robot, and each target position used a fixed **40 mm ArUco marker**.
 
+![Logitech view of the physical repeatability setup](schemas/schema26.png)
+
 For each target, the robot followed this sequence:
 
 ```text id="f6k3d2"
