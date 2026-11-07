@@ -76,7 +76,7 @@ ball_pick_node:
     goal_max_age: 1.0
     # 3D distance from base_link origin. Beyond about 0.30 m the servo 1
     # housing reaches the desk.
-    max_target_distance: 0.29
+    max_target_distance: 0.30
     planning_attempts: 2
     allowed_planning_time: 1.0
     velocity_scaling: 0.35

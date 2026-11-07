@@ -1210,3 +1210,27 @@ This measurement also includes some error from the Logitech camera and ArUco det
 The marker-to-TCP calibration is still provisional.
 
 This benchmark is **inspired by ISO 9283**, but it is not a full ISO 9283 test.
+
+### 2026-11-07 — Physical pick benchmark (experience B)
+
+I manually tested 9 selected ball positions, with 5 planned picks per position (45 total).
+The ball was moved by hand between positions and repetitions. A rigid box was used as
+the support for elevated placements. The camera was recalibrated on the desk checkerboard
+between position changes and after camera movement.
+
+![3D distribution of the nine representative pick positions](schemas/schema28.png)
+
+| Position | Angle | Depth | Height | Recorded result |
+|---|---:|---:|---:|---:|
+| P1 | 1 | 3 | 2 | 5/5 success |
+| P2 | 1 | 2 | 1 | 2/5 success |
+| P3 | 1 | 1 | 1 | 4/5 success |
+| P4 | 2 | 3 | 1 | 4/5 success |
+| P5 | 2 | 2 | 2 | 3/5 success |
+| P6 | 2 | 1 | 1 | 5/5 success |
+| P7 | 3 | 3 | 1 | 4/5 success |
+| P8 | 3 | 2 | 1 | 2/5 success |
+| P9 | 3 | 1 | 2 | 5/5 success |
+
+![Robot-camera view of the physical pick setup at P9](schemas/schema27.jpg)
+
