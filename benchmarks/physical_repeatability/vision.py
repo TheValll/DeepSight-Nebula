@@ -1,8 +1,8 @@
-"""Direct V4L2 capture, onboard stereo rectification and planar ArUco poses.
+"""Direct AVFoundation capture, onboard stereo rectification and planar ArUco poses.
 
 Cameras are opened only when Camera(...) is constructed. Optics (focus, zoom,
-exposure) are never written; v4l2-ctl is only used read-only to compare the
-Logitech controls with the values stored in its intrinsic calibration.
+exposure) are never written. AVFoundation does not expose the Logitech UVC
+focus controls here; focus and zoom must be fixed and checked manually.
 """
 import json
 import os
@@ -31,7 +31,7 @@ def same_device(a, b):
 
 
 class Camera:
-    """Single owner of one V4L2 device with a continuous draining capture thread.
+    """Single owner of one AVFoundation camera with a continuous draining capture thread.
 
     Every successful read gets a unique, increasing sequence number and its
     monotonic/UTC acquisition time. Repeated read failures (unplug, device busy)
@@ -48,14 +48,14 @@ class Camera:
         self.failures = 0
         self.max_consecutive_failures = max_consecutive_failures
         index = int(source) if str(source).isdigit() else str(source)
-        self.cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
+        if not isinstance(index, int) or index < 0:
+            raise CameraFailure('AVFoundation camera source must be a nonnegative index')
+        self.cap = cv2.VideoCapture(index, cv2.CAP_AVFOUNDATION)
         if not self.cap.isOpened():
             raise CameraFailure(f'{name}: cannot open {source}; close other owners first')
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
         self.cap.set(cv2.CAP_PROP_FPS, fps)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
         actual = (int(round(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))), int(round(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
         if actual != self.resolution:
             self.cap.release()
@@ -221,15 +221,15 @@ def load_intrinsics(path, frame_size, source=None):
 
 
 def read_controls(source, names=('focus_automatic_continuous', 'focus_absolute', 'zoom_absolute')):
-    """Read-only v4l2-ctl query; never sets a control."""
-    result = subprocess.run(['v4l2-ctl', '-d', str(source), '--get-ctrl=' + ','.join(names)],
-                            capture_output=True, text=True, timeout=5)
-    if result.returncode:
-        raise CameraFailure('cannot read external camera controls: ' + result.stderr.strip())
-    return {line.split(':')[0].strip(): int(line.split(':')[1]) for line in result.stdout.splitlines() if ':' in line}
+    """Record the camera identity; UVC focus/zoom need manual verification on macOS."""
+    return {'backend': 'AVFoundation', 'device': str(source), 'focus_verification': 'manual'}
 
 
 def check_controls(controls, calibration_data):
+    if controls.get('backend') == 'AVFoundation':
+        if controls != calibration_data.get('camera_controls'):
+            raise ValueError('Recalibrate this AVFoundation camera after manually fixing focus and zoom')
+        return
     if controls.get('focus_automatic_continuous') != 0:
         raise ValueError('Logitech autofocus is enabled; disable it manually (not changed automatically)')
     if controls != calibration_data.get('camera_controls'):

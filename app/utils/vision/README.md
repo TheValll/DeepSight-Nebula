@@ -1,5 +1,5 @@
 ```bash
-cd /home/valentin/DeepSight-Nebula
+cd ~/Documents/DeepSight-Nebula
 
 # SPACE: start after 3 seconds. ESC: stop.
 .venv/bin/python app/utils/vision/record_ball_dataset.py \
@@ -38,7 +38,7 @@ cd /home/valentin/DeepSight-Nebula
 ```
 
 ```bash
-# Train the 9 models, one after another on CUDA. Use a new output folder each time.
+# Train the 9 models, one after another on MPS. Use a new output folder each time.
 .venv/bin/python app/utils/vision/finetune_ball_models.py \
   --output benchmarks/finetuning/ping_pong_20261010 \
   --imgsz 1280 --epochs 100 --patience 20 --batch 4

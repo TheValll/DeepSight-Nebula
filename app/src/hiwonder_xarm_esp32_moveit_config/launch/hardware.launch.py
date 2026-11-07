@@ -1,3 +1,4 @@
+from glob import glob
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.conditions import IfCondition
@@ -12,6 +13,9 @@ from moveit_configs_utils.launches import (
     generate_static_virtual_joint_tfs_launch,
 )
 
+
+SERIAL_PORTS = sorted(glob('/dev/cu.usbserial*') + glob('/dev/cu.usbmodem*'))
+DEFAULT_SERIAL_PORT = SERIAL_PORTS[0] if len(SERIAL_PORTS) == 1 else ''
 
 def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port')
@@ -28,6 +32,7 @@ def generate_launch_description():
                 'read_only': 'false',
             }
         )
+        .planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl")
         .to_moveit_configs()
     )
 
@@ -35,8 +40,8 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 'serial_port',
-                # Stable path of the CH340 adapter (ttyUSB0 may change).
-                default_value='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
+                # Auto-select only when exactly one USB serial adapter is present.
+                default_value=DEFAULT_SERIAL_PORT,
                 description='Serial port connected to the ESP32 Rust firmware',
             ),
             DeclareLaunchArgument('use_rviz', default_value='true'),

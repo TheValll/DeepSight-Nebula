@@ -3,5 +3,11 @@ from moveit_configs_utils.launches import generate_spawn_controllers_launch
 
 
 def generate_launch_description():
-    moveit_config = MoveItConfigsBuilder("hiwonder_esp32", package_name="hiwonder_xarm_esp32_moveit_config").to_moveit_configs()
+    moveit_config = (
+        MoveItConfigsBuilder(
+            "hiwonder_esp32", package_name="hiwonder_xarm_esp32_moveit_config"
+        )
+        .planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl")
+        .to_moveit_configs()
+    )
     return generate_spawn_controllers_launch(moveit_config)

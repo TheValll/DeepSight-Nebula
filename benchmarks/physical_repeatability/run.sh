@@ -3,12 +3,12 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
-PYTHON="${PYTHON:-/usr/bin/python3}"
+PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
 
 source_ros() {
   set +u
   # shellcheck disable=SC1091
-  source /opt/ros/jazzy/setup.bash
+  source "$HOME/ros2_robotics/install/setup.bash"
   # shellcheck disable=SC1091
   source "$ROOT/app/install/setup.bash"
   set -u

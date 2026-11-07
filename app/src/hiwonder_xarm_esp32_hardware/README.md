@@ -54,7 +54,7 @@ After opening the serial port, the plugin waits `startup_delay_ms=2000` before
 its first read, allowing a CH340-triggered ESP32 reset to complete.
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source install/setup.bash
 ros2 launch hiwonder_xarm_esp32_moveit_config calibration_rviz.launch.py
 ```
@@ -73,14 +73,15 @@ the fixed URDF geometry is left unchanged.
 From the `app` workspace:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source install/setup.bash
 ros2 launch hiwonder_xarm_esp32_moveit_config hardware.launch.py
 ```
 
-Both launches default to the stable path of the CH340 adapter,
-`/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0`; override it with
-`serial_port:=...` if needed.
+Both launches automatically select the USB serial adapter only when exactly one
+`/dev/cu.usbserial*` or `/dev/cu.usbmodem*` device exists. Otherwise pass
+`serial_port:=/dev/cu.usbserial-2140`, using the name shown by
+`python -m serial.tools.list_ports -v`. No device path is guessed when ambiguous.
 
 The plugin reads all six servos and initializes the controller commands from
 their actual positions before accepting trajectory commands. During operation,

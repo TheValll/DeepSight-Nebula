@@ -193,7 +193,7 @@ def parse_args():
     parser.add_argument("--iou", type=float, default=0.50, help="Prediction/ground-truth matching IoU, not NMS")
     parser.add_argument("--imgsz", type=int, default=1280)
     parser.add_argument("--eval-stride", type=int, default=1, help="Score every Nth frame; all frames are still inferred")
-    parser.add_argument("--device", choices=("cuda:0", "cpu"), default="cuda:0")
+    parser.add_argument("--device", choices=("mps", "cpu"), default="mps")
     parser.add_argument("--prompt", default="ping pong ball", help="Only applied to pretrained YOLOE")
     parser.add_argument("--allow-unannotated", action="store_true", help="Diagnostic mode: never count missing references as negatives")
     parser.add_argument("--export-frames", action="store_true", help="Prepare reference frames without running a model")
@@ -219,8 +219,8 @@ def main():
     import psutil
     import torch
     import ultralytics
-    if args.device.startswith("cuda") and not torch.cuda.is_available():
-        raise RuntimeError("CUDA unavailable; no silent fallback to CPU")
+    if args.device == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("MPS unavailable; no silent fallback to CPU")
     if args.weights:
         weights = args.weights.resolve()
     elif args.variant == "finetuned":
@@ -243,7 +243,6 @@ def main():
                 "inputs": [{"video": v["path"].name, "sha256": v["video_sha256"], "task": v["task"], "labels": v["label_sha256"]} for v in videos]}
     metadata["reference_fingerprint"] = hashlib.sha256(json.dumps(metadata["inputs"], sort_keys=True).encode()).hexdigest()
     write_json(output/"metadata.json", metadata)
-    nvml = handle = None
     all_rows, per_video = [], []
     try:
         constructor = ultralytics.YOLOE if args.model.startswith("yoloe") else ultralytics.YOLO
@@ -260,15 +259,8 @@ def main():
         if args.variant == "finetuned" and model.names != {0: "ping_pong_ball"}:
             raise ValueError(f"Unexpected fine-tuned classes: {model.names}")
         metadata.update(prompt=prompt, class_id=class_id, task=model.task)
-        if args.device.startswith("cuda"):
-            metadata["gpu"] = torch.cuda.get_device_name(0)
-            try:
-                import pynvml
-                pynvml.nvmlInit()
-                nvml = pynvml
-                handle = nvml.nvmlDeviceGetHandleByIndex(0)
-            except Exception as error:
-                metadata["gpu_monitoring_warning"] = str(error)
+        metadata["gpu"] = "Apple GPU (MPS)" if args.device == "mps" else None
+        metadata["gpu_monitoring_note"] = "MPS allocated memory is unified memory; GPU utilization is not measured"
         write_json(output/"metadata.json", metadata)
         # Same left-frame geometry and 20 warm-ups, excluded from all measurements.
         cap = cv2.VideoCapture(str(videos[0]["path"]))
@@ -296,12 +288,12 @@ def main():
                         decoded = time.perf_counter()
                         if not ok or image.shape[:2] != (720, 1280):
                             raise RuntimeError(f"Decode failed at {item['path']} frame {index}")
-                        if args.device.startswith("cuda"):
-                            torch.cuda.synchronize()
+                        if args.device == "mps":
+                            torch.mps.synchronize()
                         inference_start = time.perf_counter()
                         result = model.predict(image, **options)[0]
-                        if args.device.startswith("cuda"):
-                            torch.cuda.synchronize()
+                        if args.device == "mps":
+                            torch.mps.synchronize()
                         inference_ms = 1000*(time.perf_counter()-inference_start)
                         predictions = [] if result.boxes is None else [
                             {"xyxy": box, "confidence": confidence}
@@ -309,9 +301,6 @@ def main():
                         truth = item["truth"].get(index)
                         tp, fp, fn = match(predictions, truth, args.iou) if truth is not None else (None, None, None)
                         gpu = vram = None
-                        if handle is not None:
-                            gpu = nvml.nvmlDeviceGetUtilizationRates(handle).gpu
-                            vram = nvml.nvmlDeviceGetMemoryInfo(handle).used/2**20
                         row = {"video": item["path"].name, "ball_color": item["task"]["ball_color"], "movement": item["task"]["movement"],
                                "frame_index": index, "source_timestamp_s": item["metadata"]["frame_timestamps_s"][index],
                                "prediction_count": len(predictions), "evaluated": truth is not None,
@@ -320,7 +309,7 @@ def main():
                                "decode_ms": 1000*(decoded-started), "inference_ms": inference_ms,
                                "cpu_system_percent": psutil.cpu_percent(), "ram_system_mb": psutil.virtual_memory().used/2**20,
                                "ram_process_mb": process.memory_info().rss/2**20, "gpu_system_percent": gpu, "vram_system_mb": vram,
-                               "torch_allocated_mb": torch.cuda.memory_allocated()/2**20 if args.device.startswith("cuda") else None}
+                               "torch_allocated_mb": torch.mps.current_allocated_memory()/2**20 if args.device == "mps" else None}
                         row["total_processing_ms"] = 1000*(time.perf_counter()-started)
                         if writer is None:
                             writer = csv.DictWriter(csv_file, fieldnames=list(row))
@@ -353,8 +342,6 @@ def main():
     finally:
         metadata["finished_at"] = datetime.now().astimezone().isoformat()
         write_json(output/"metadata.json", metadata)
-        if nvml is not None:
-            nvml.nvmlShutdown()
 
 
 if __name__ == "__main__":

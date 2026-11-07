@@ -14,10 +14,11 @@ def generate_launch_description():
         MoveItConfigsBuilder('hiwonder_esp32', package_name='hiwonder_xarm_esp32_moveit_config')
         .robot_description(mappings={
             'use_mock_hardware': 'false',
-            'serial_port': '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
+            'serial_port': '',
             'gripper_hardware_io_enabled': 'true',
             'read_only': 'false',
         })
+        .planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl")
         .to_moveit_configs()
     )
     description = LaunchDescription()

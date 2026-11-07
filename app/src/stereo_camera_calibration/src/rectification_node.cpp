@@ -38,8 +38,7 @@ public:
     // No code default for the calibration, camera and depth settings: they come
     // from the launch files and config/pipeline.yaml, and a missing one is an error.
     const auto calibration_file = declare_parameter<std::string>("calibration_file");
-    // Stable V4L path (/dev/v4l/by-id/...) rather than an index that changes
-    // with the USB enumeration order.
+    // AVFoundation camera index, passed as a string by the launch argument.
     const auto camera_device = declare_parameter<std::string>("camera_device");
     // Frame of the rectified images and depth: the camera frame corrected on the
     // desk at startup (camera_desk_calibration), child of the URDF camera frame.
@@ -155,14 +154,15 @@ private:
 
   void run(const std::string & camera_device)
   {
-    cv::VideoCapture camera(camera_device, cv::CAP_V4L2);
-    camera.set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    std::size_t parsed = 0;
+    const int camera_index = std::stoi(camera_device, &parsed);
+    if (parsed != camera_device.size() || camera_index < 0) {
+      throw std::runtime_error("camera_device must be a nonnegative AVFoundation index");
+    }
+    cv::VideoCapture camera(camera_index, cv::CAP_AVFOUNDATION);
     camera.set(cv::CAP_PROP_FRAME_WIDTH, kStereoWidth);
     camera.set(cv::CAP_PROP_FRAME_HEIGHT, kStereoHeight);
     camera.set(cv::CAP_PROP_FPS, kFramesPerSecond);
-    // V4L2 needs at least two buffers to capture at the requested frame rate.
-    // A single buffer halves this camera from 30 FPS to about 15 FPS.
-    camera.set(cv::CAP_PROP_BUFFERSIZE, 2);
 
     if (!camera.isOpened()) {
       throw std::runtime_error("Unable to open stereo camera " + camera_device);

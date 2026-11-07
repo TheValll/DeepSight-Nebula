@@ -132,6 +132,10 @@ hardware_interface::CallbackReturn HiwonderSystem::on_init(
     {
       port_ = it->second;
     }
+    if (port_.empty()) {
+      throw std::invalid_argument(
+              "No unambiguous USB serial port; pass serial_port:=/dev/cu.usbserial-...");
+    }
     if (const auto it = info_.hardware_parameters.find("baudrate");
       it != info_.hardware_parameters.end())
     {

@@ -5,6 +5,8 @@ controller. HiwonderSystem receives read_only:=true, so even an accidental
 position command cannot result in a servo move. All six servos are read.
 """
 
+from glob import glob
+
 import os
 import stat
 
@@ -50,6 +52,9 @@ def _start_after_serial_validation(context, serial_port, *actions):
         return _validation_failure(error)
     return list(actions)
 
+
+SERIAL_PORTS = sorted(glob('/dev/cu.usbserial*') + glob('/dev/cu.usbmodem*'))
+DEFAULT_SERIAL_PORT = SERIAL_PORTS[0] if len(SERIAL_PORTS) == 1 else ''
 
 def generate_launch_description():
     serial_port = LaunchConfiguration('serial_port')
@@ -119,7 +124,7 @@ def generate_launch_description():
         [
             DeclareLaunchArgument(
                 'serial_port',
-                default_value='/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0',
+                default_value=DEFAULT_SERIAL_PORT,
                 description='Serial port connected to the ESP32 Rust firmware',
             ),
             # Nodes are created only after this runtime validation succeeds.

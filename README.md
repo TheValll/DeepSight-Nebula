@@ -71,63 +71,109 @@ I will use **Gemini** to help me rephrase and improve this document throughout t
 
 ## Environment Setup
 
-This project was developed on an **Ubuntu Linux** container in a **Fedora Linux** environment, with **ROS 2 Jazzy**.
+The runtime targets **macOS on Apple Silicon**, with native **ROS 2 Jazzy**,
+**MoveIt 2 / OMPL**, **ros2_control**, **Python 3.12** and **PyTorch MPS**.
+The ROS package names, launch filenames and commands below are unchanged.
+
+### Native ROS dependencies
+
+Use a native Jazzy underlay containing `cv_bridge`, `python_qt_binding`,
+`joint_state_publisher_gui`, `robot_state_publisher`, RViz, xacro, MoveIt with
+OMPL, ros2_control, joint_state_broadcaster, joint_trajectory_controller,
+position_controllers and gripper_controllers. The local source installation
+is loaded from `~/ros2_robotics/env.zsh`. The Qt binding must support PyQt5;
+the older Darwin-only PySide2 default does not work with Python 3.12.
+`cv_bridge` must be built for the same Python 3.12 and OpenCV 4 as this project.
+Homebrew's default OpenCV 5 and Boost.Python for a newer Python are unsuitable.
+
+```zsh
+brew install python@3.12 opencv@4 boost libomp
+source ~/ros2_robotics/env.zsh
+```
 
 ### Python environment
 
-From the project root, create one virtual environment for the complete project.
-These PyTorch packages are for my RTX 5080 and may differ for another GPU:
+From the repository root, create one native environment for the complete project:
 
-```bash
-python3 -m venv .venv
+```zsh
+"$(brew --prefix python@3.12)/bin/python3.12" -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install "torch==2.13.0+cu132" "torchvision==0.28.0+cu132" \
-  --index-url https://download.pytorch.org/whl/cu132 \
-  --no-cache-dir
+python -m pip install --upgrade pip wheel 'setuptools<80'
 python -m pip install \
-  "numpy==1.26.4" \
-  "opencv-python==4.10.0.84" \
-  "typeguard==4.6.0" \
-  "ultralytics==8.4.127" \
-  "psutil==7.2.2" \
-  "nvidia-ml-py==13.610.43"
+  'torch==2.15.0' 'torchvision==0.29.2' \
+  'numpy==1.26.4' 'opencv-python==4.10.0.84' \
+  'ultralytics==8.4.127' 'PyQt5==5.15.11' \
+  'scipy==1.14.1' typeguard psutil pyserial colcon-common-extensions empy lark catkin_pkg 'cmake<4'
 ```
 
-Check the environment:
+Use one OpenMP runtime for Homebrew's OpenCV and PyTorch. The Fast DDS large-data
+transport gives raw stereo images enough shared-memory/socket buffering on macOS. Keep SIP enabled;
+do not use `KMP_DUPLICATE_LIB_OK` to mask conflicting runtimes:
 
-```bash
-.venv/bin/python -c "import cv2, numpy, psutil, pynvml, torch, ultralytics; print('CUDA:', torch.cuda.is_available())"
+```zsh
+export DYLD_LIBRARY_PATH="$(brew --prefix libomp)/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+export FASTDDS_BUILTIN_TRANSPORTS="LARGE_DATA?max_msg_size=4MB&sockets_size=4MB"
+export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+export OpenCV_DIR="$(brew --prefix opencv@4)/lib/cmake/opencv4"
+python -c "import cv2, torch; from cv_bridge import CvBridge; print('MPS:', torch.backends.mps.is_available())"
 ```
 
 ### Build the ROS 2 workspace
 
-```bash
+In that same terminal:
+
+```zsh
 cd app
-source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 ```
 
 | Package | Content |
 |---|---|
 | `hiwonder_xarm_esp32_description` | URDF: arm, gripper, printed stereo camera mount |
-| `hiwonder_xarm_esp32_hardware` | `ros2_control` plugin for the Rust firmware, servo calibration CLI |
-| `hiwonder_xarm_esp32_moveit_config` | MoveIt 2 configuration, controllers, collision floor |
-| `stereo_camera_calibration` | Stereo calibration, depth, YOLO detection, ball goal, pick node |
+| `hiwonder_xarm_esp32_hardware` | USB serial ros2_control plugin and servo calibration CLI |
+| `hiwonder_xarm_esp32_moveit_config` | OMPL planning, mock/real controllers, collision floor |
+| `stereo_camera_calibration` | AVFoundation capture, calibration, depth, MPS YOLO and pick nodes |
 
-The Rust firmware must be flashed on the ESP32 first:
+For real hardware, the Rust firmware must already be flashed on the ESP32:
 [firmware user guide](rust_firmware/specs/DeepSight-Nebula_Rust_Firmware_User_Guide.md).
+The mock `demo.launch.py` requires neither the robot nor the camera.
+
+### Nushell on this Mac
+
+The existing local environment loader imports the ROS underlay, the project's
+`.venv` and `app/install` without interpreting zsh syntax in Nushell:
+
+```nu
+source ~/ros2_deepsight/env.nu
+cd ~/Documents/DeepSight-Nebula
+ros2 launch hiwonder_xarm_esp32_moveit_config demo.launch.py
+```
+
+Recompile from the `app` directory with the same `colcon build --symlink-install`
+command. No platform-specific launch filename is needed.
 
 ---
+
+## Native macOS validation
+
+On 2026-11-07, all four packages compiled, the 52 offline physical-benchmark tests
+passed, and the original `demo.launch.py` planned and executed an 8-point trajectory
+on `mock_components/GenericSystem`. The live USB-camera pipeline delivered a
+1280×720 rectified image, 640×360 depth and a 1280×720 YOLO-annotated image on MPS.
+The physical arm was only enumerated as a serial USB device; no physical grasp or
+hardware-controller execution was performed. Dated logbook measurements below
+remain historical results from their original environments.
 
 ## Commands
 
 Every command runs **from the project root**, in a terminal prepared with:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source app/install/setup.bash
-source .venv/bin/activate   # needed by every launch that runs YOLO
+source .venv/bin/activate
+export DYLD_LIBRARY_PATH="$(brew --prefix libomp)/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}"
+export FASTDDS_BUILTIN_TRANSPORTS="LARGE_DATA?max_msg_size=4MB&sockets_size=4MB"
 ```
 
 | Goal | Robot | Command |
@@ -165,7 +211,7 @@ gripper controller is loaded. The ball goal shown in RViz is the target the pick
 Terminal 1:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source app/install/setup.bash
 source .venv/bin/activate
 ros2 launch stereo_camera_calibration ball_pick_hardware.launch.py
@@ -180,7 +226,7 @@ Terminal 2 (Enter = one pick, q = quit):
 Other commands:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source app/install/setup.bash
 ros2 service call /pick_ball std_srvs/srv/Trigger
 ros2 service call /pick_status std_srvs/srv/Trigger
@@ -193,10 +239,10 @@ pgrep -fa move_group && pkill -9 -f moveit_ros_move_group/move_group
 
 ### Arm self-calibration
 
-Terminal 1: `ball_pick_hardware.launch.py` (above). Terminal 2, without `.venv`:
+Terminal 1: `ball_pick_hardware.launch.py` (above). Terminal 2, with the project `.venv` active:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
+source ~/ros2_robotics/install/setup.bash
 source app/install/setup.bash
 python3 app/utils/arm_calibration/calibrate_arm.py collect
 python3 app/utils/arm_calibration/calibrate_arm.py fit
@@ -217,13 +263,13 @@ The launches only pass the paths, which can be overridden as launch arguments (`
 
 | Argument | Default |
 |---|---|
-| `camera_device` | `/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0` |
+| `camera_device` | `0` (AVFoundation index; override when enumeration changes) |
 | `calibration_file` | `app/calibration/stereo_calib.xml` |
 | `model` | `benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt` (YOLO26n FT, class `ping_pong_ball`) |
-| `serial_port` | `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` |
+| `serial_port` | auto-detected when exactly one USB serial adapter is connected |
 | `use_rviz` | `true` (`ball_pick_hardware` and `hardware.launch.py`) |
 
-The `by-id` paths do not change with the USB enumeration order, unlike `/dev/video2` or `/dev/ttyUSB0`.
+The camera uses an AVFoundation index. USB serial devices use `/dev/cu.usbserial*` or `/dev/cu.usbmodem*`. If none or several are present, explicitly pass `serial_port:=/dev/cu.usbserial-2140`. YOLO uses `device: mps` in `pipeline.yaml`; `cpu` is available for diagnostics.
 The YOLO weights are not tracked by git; the YOLO node refuses to start if the file is missing.
 Servo calibration (references, scales, limits) is described in the
 [hardware README](app/src/hiwonder_xarm_esp32_hardware/README.md).
@@ -276,20 +322,28 @@ Leave this node running to serve the corrected transform. Success is confirmed b
 `Caméra recalée sur le bureau` and a new date in the correction file. A timeout or a refused correction keeps
 the previous calibration.
 
-**Camera anti-flicker.** With a 50 Hz grid (France), set it before recording or benchmarking; reapply it after
-reconnecting the camera:
+**Camera access.** Allow the terminal under macOS System Settings → Privacy & Security → Camera.
+The stereo stream must remain 2560×720 (two 1280×720 views). To list the AVFoundation indices:
 
-```bash
-v4l2-ctl --list-devices
-v4l2-ctl -d /dev/video0 --set-ctrl=power_line_frequency=1
+```zsh
+ffmpeg -hide_banner -f avfoundation -list_devices true -i ""
 ```
+
+The listing command exits with an error after printing the devices because no input was selected.
+FFmpeg and OpenCV may enumerate them in different orders: OpenCV sorts AVFoundation unique IDs.
+The tested 3D USB Camera uses OpenCV index 0; verify the 2560×720 stream after reconnecting it.
+A USB-C hub is usable; a direct adapter that does not enumerate the camera cannot capture it.
+AVFoundation does not expose the former UVC anti-flicker/focus controls here. If supported by the
+camera's own software, configure 50 Hz lighting and fixed focus manually before calibration.
+The external-camera physical benchmark requires a new AVFoundation camera identity calibration;
+it does not automatically validate focus or reuse a calibration from another device path.
 
 **Servo calibration CLI.** Reads raw servo positions, or moves one servo when `--execute` is given. Stop every
 launch first: it needs the serial port.
 
 ```bash
 ros2 run hiwonder_xarm_esp32_hardware servo_calibration_cli read --id 3 --count 5 \
-  --port /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
+  --port /dev/cu.usbserial-2140
 ```
 
 **Real robot in RViz without MoveIt (read-only).** Joint positions only, used for servo calibration:

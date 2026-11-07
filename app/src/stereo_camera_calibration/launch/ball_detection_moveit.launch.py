@@ -3,10 +3,12 @@
 The real hardware publishes measured joint positions; every servo output is
 blocked (read_only) and no arm or gripper command controller is loaded.
 """
+from glob import glob
+import os
 from pathlib import Path
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration
+from launch.actions import DeclareLaunchArgument, SetLaunchConfiguration, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -22,11 +24,15 @@ from moveit_configs_utils.launches import (
 CALIBRATION = 'app/calibration/stereo_calib.xml'
 CORRECTION = 'app/calibration/camera_desk_correction.yaml'
 WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
-CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
-SERIAL = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
+CAMERA = '0'
+SERIAL_PORTS = sorted(glob('/dev/cu.usbserial*') + glob('/dev/cu.usbmodem*'))
+SERIAL = SERIAL_PORTS[0] if len(SERIAL_PORTS) == 1 else ''
 
 
 def generate_launch_description():
+    openmp_path = str(
+        Path(os.environ.get('HOMEBREW_PREFIX', '/opt/homebrew')) / 'opt/libomp/lib')
+    library_path = ':'.join(filter(None, [openmp_path, os.environ.get('DYLD_LIBRARY_PATH')]))
     # Works from the source file and from a colcon-installed copy in this repo.
     root = next(parent for parent in Path(__file__).resolve().parents
                 if (parent / CALIBRATION).is_file())
@@ -38,9 +44,14 @@ def generate_launch_description():
         'use_mock_hardware': 'false',
         'serial_port': LaunchConfiguration('serial_port'),
         'read_only': 'true',
-    }).to_moveit_configs()
+    }).planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl").to_moveit_configs()
 
     description = LaunchDescription([
+        SetEnvironmentVariable(
+            'FASTDDS_BUILTIN_TRANSPORTS',
+            os.environ.get('FASTDDS_BUILTIN_TRANSPORTS')
+            or 'LARGE_DATA?max_msg_size=4MB&sockets_size=4MB'),
+        SetEnvironmentVariable('DYLD_LIBRARY_PATH', library_path),
         DeclareLaunchArgument('serial_port', default_value=SERIAL),
         DeclareLaunchArgument('camera_device', default_value=CAMERA),
         DeclareLaunchArgument('calibration_file', default_value=str(root / CALIBRATION)),

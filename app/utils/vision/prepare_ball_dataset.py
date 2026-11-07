@@ -16,7 +16,7 @@ import shutil
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_EXPORT = Path('/home/valentin/ball-label-review/workspace/export_20261010_190357_670797')
+DEFAULT_EXPORT = Path.home() / 'Documents/ball-label-review/workspace/export_20261010_190357_670797'
 VIDEO_PATTERN = re.compile(r'^\d{8}_\d{6}_\d{6}_(.+)_(white|orange|none)\.avi$')
 
 

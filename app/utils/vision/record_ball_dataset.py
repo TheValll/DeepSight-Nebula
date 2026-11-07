@@ -30,7 +30,7 @@ def parse_args():
         default=10.0,
         help="recording duration in seconds (default: 10)",
     )
-    parser.add_argument("--camera", type=int, default=2, help="OpenCV camera index (default: 2)")
+    parser.add_argument("--camera", type=int, default=0, help="AVFoundation camera index (default: 0)")
     parser.add_argument("--countdown", type=float, default=3.0, help="countdown in seconds")
     parser.add_argument("--fps", type=float, default=30.0, help="requested camera FPS (default: 30)")
     parser.add_argument(
@@ -87,12 +87,10 @@ def read_left(camera):
 
 def main():
     args = parse_args()
-    camera = cv2.VideoCapture(args.camera, cv2.CAP_V4L2)
-    camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    camera = cv2.VideoCapture(args.camera, cv2.CAP_AVFOUNDATION)
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     camera.set(cv2.CAP_PROP_FPS, args.fps)
-    camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     if not camera.isOpened():
         print(f"Could not open camera index {args.camera}.", file=sys.stderr)
         camera.release()

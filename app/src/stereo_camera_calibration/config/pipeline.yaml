@@ -29,7 +29,8 @@ camera_desk_calibration:
     board_inner_rows: 5
     board_square_size: 0.025
     # Without the board in view after this time, the calibration is skipped.
-    search_timeout: 20.0
+    # Allow for AVFoundation and MoveIt startup before collecting the samples.
+    search_timeout: 60.0
     samples: 10
     # Larger corrections are refused (board not flat, wrong board...).
     max_tilt_correction_deg: 10.0
@@ -37,6 +38,7 @@ camera_desk_calibration:
 
 yolo_detection_node:
   ros__parameters:
+    device: mps  # Apple GPU; explicitly use cpu for diagnostics.
     # Fine-tuned YOLO26n (README, 2026-10-11): single class 0 = ping-pong ball.
     # The benchmark used confidence 0.50; the robot uses 0.75 to avoid false goals.
     confidence: 0.75

@@ -42,8 +42,7 @@ The validated controller has the following characteristics:
 | Crystal | 40 MHz |
 | Flash | 4 MiB |
 | USB-to-serial converter | QinHeng CH340 (`1a86:7523`) |
-| Linux serial device | Usually `/dev/ttyUSB0` |
-| Stable Linux path | `/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0` |
+| macOS serial device | `/dev/cu.usbserial-2140` (example; enumerate before use) |
 
 ### 2.1 Servo bus pins
 
@@ -98,41 +97,22 @@ already accepted by a servo continues for its encoded duration.
 
 ### 4.1 Identify the serial converter
 
-```bash
-lsusb
+```zsh
+system_profiler SPUSBDataType
+python -m serial.tools.list_ports -v
 ```
 
-The validated converter appears as:
+The validated converter identifies as `1a86:7523` (CH340). On this Mac it is
+`/dev/cu.usbserial-2140`; substitute the actual `/dev/cu.usbserial*` or
+`/dev/cu.usbmodem*` path in the commands below.
 
-```text
-1a86:7523 QinHeng Electronics CH340 serial converter
-```
+### 4.2 Serial access
 
-Find the associated port:
+Use the macOS `/dev/cu.*` callout device. Close other serial monitors before
+opening it; there is no `dialout` group or ACL setup to perform.
 
-```bash
-find /dev -maxdepth 1 \( -name 'ttyUSB*' -o -name 'ttyACM*' \) -ls
-```
-
-### 4.2 Serial permissions
-
-Add the current user to the `dialout` group:
-
-```bash
-sudo usermod -aG dialout "$USER"
-```
-
-Log out and back in for the group change to take effect. For temporary access
-without closing the current session:
-
-```bash
-sudo setfacl -m u:"$USER":rw /dev/ttyUSB0
-```
-
-Verify access:
-
-```bash
-test -r /dev/ttyUSB0 -a -w /dev/ttyUSB0 && echo "Serial access OK"
+```zsh
+test -r /dev/cu.usbserial-2140 -a -w /dev/cu.usbserial-2140 && echo "Serial access OK"
 ```
 
 ---
@@ -189,7 +169,7 @@ Run the host-side unit tests separately with stable Rust:
 rustup run stable cargo test \
   --locked \
   --offline \
-  --target x86_64-unknown-linux-gnu \
+  --target aarch64-apple-darwin \
   --lib
 ```
 
@@ -202,7 +182,7 @@ Keep servo power off and USB connected. From `rust_firmware/`:
 ```bash
 espflash flash \
   --chip esp32 \
-  --port /dev/ttyUSB0 \
+  --port /dev/cu.usbserial-2140 \
   target/xtensa-esp32-none-elf/release/rust_firmware
 ```
 
@@ -215,7 +195,7 @@ Flashing has completed!
 Verify that the CH340 port has returned:
 
 ```bash
-test -c /dev/ttyUSB0 && echo "Serial port ready"
+test -c /dev/cu.usbserial-2140 && echo "Serial port ready"
 ```
 
 The firmware intentionally prints no normal logs on UART0. Text output would
@@ -356,11 +336,11 @@ From the repository root:
 
 ```bash
 cd micro_python_firmware
-md5sum -c flash_dump_4mb.bin.md5
-esptool --port /dev/ttyUSB0 --baud 921600 erase-flash
-esptool --port /dev/ttyUSB0 --baud 921600 \
+test "$(md5 -q flash_dump_4mb.bin)" = "$(awk '{print $1}' flash_dump_4mb.bin.md5)"
+esptool --port /dev/cu.usbserial-2140 --baud 921600 erase-flash
+esptool --port /dev/cu.usbserial-2140 --baud 921600 \
   write-flash 0x0 flash_dump_4mb.bin
-esptool --port /dev/ttyUSB0 --baud 921600 \
+esptool --port /dev/cu.usbserial-2140 --baud 921600 \
   verify-flash 0x0 flash_dump_4mb.bin
 ```
 
@@ -372,15 +352,15 @@ Do not interrupt power during `write-flash` or `verify-flash`.
 
 ### 13.1 Serial port not found
 
-- Check the USB cable and `lsusb` output.
+- Check the USB cable and `system_profiler SPUSBDataType` output.
 - Confirm that the CH340 appears as `1a86:7523`.
-- Inspect `/dev/ttyUSB*` and the stable `/dev/serial/by-id/` path.
+- Enumerate `/dev/cu.usbserial*` and `/dev/cu.usbmodem*` devices.
 
 ### 13.2 Permission denied
 
-- Check membership of `dialout` with `id`.
-- Reopen the Linux login session after `usermod`.
-- Use a temporary ACL only when needed.
+- Confirm that the terminal is allowed to access USB accessories in macOS.
+- Close any other application using the serial device.
+- Re-enumerate the `/dev/cu.*` device after reconnecting it.
 
 ### 13.3 No servo response
 

@@ -70,7 +70,7 @@ private:
   std::vector<double> previous_positions_;
   std::vector<std::uint16_t> last_written_raw_;
   std::vector<int> read_failures_;
-  std::string port_{"/dev/ttyUSB0"};
+  std::string port_;
   int baudrate_{115200};
   int timeout_ms_{50};
   int startup_delay_ms_{2000};

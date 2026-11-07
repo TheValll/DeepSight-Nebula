@@ -27,8 +27,8 @@ class DefaultsTests(unittest.TestCase):
         self.assertEqual(config['settling_s'], 1.0)
         self.assertEqual(config['joint_state_recovery_timeout_s'], 60.0)
         self.assertFalse(config['orientation_enabled'])
-        self.assertTrue(config['robot_camera']['device'].startswith('/dev/v4l/by-id/'))
-        self.assertTrue(config['external_camera']['device'].startswith('/dev/v4l/by-id/'))
+        self.assertTrue(config['robot_camera']['device'].isdigit())
+        self.assertTrue(config['external_camera']['device'].isdigit())
         settings.validate_config(config)
 
     def test_cli_defaults_and_help(self):
@@ -47,10 +47,10 @@ class DefaultsTests(unittest.TestCase):
 
     def test_overrides(self):
         args = benchmark.build_parser().parse_args(
-            ['--cycles', '2', '--velocity', '0.5', '--external-camera', '/dev/video9', '--robot-camera', 'none'])
+            ['--cycles', '2', '--velocity', '0.5', '--external-camera', '9', '--robot-camera', 'none'])
         config = settings.apply_overrides(helpers.default_config(), args)
         self.assertEqual((config['cycles'], config['velocity_scaling'], config['acceleration_scaling']), (2, 0.5, 0.1))
-        self.assertEqual(config['external_camera']['device'], '/dev/video9')
+        self.assertEqual(config['external_camera']['device'], '9')
         self.assertIsNone(config['robot_camera']['device'])
 
 

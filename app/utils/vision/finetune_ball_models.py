@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train the nine benchmark models sequentially, with isolated CUDA workers."""
+"""Train the nine benchmark models sequentially, with isolated MPS workers."""
 
 import argparse
 import hashlib
@@ -36,6 +36,7 @@ def parse_args():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--fraction", type=float, default=1.0, help="Training fraction; keep 1 for the real comparison")
+    parser.add_argument("--device", choices=("mps", "cpu"), default="mps")
     parser.add_argument("--resume", action="store_true", help="Resume an interrupted queue using its saved settings")
     parser.add_argument("--worker-model", choices=MODELS, help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -57,8 +58,8 @@ def train_one(args):
     from ultralytics import YOLO, YOLOE
     from ultralytics.models.yolo.yoloe import YOLOEPETrainer
 
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is required; refusing to fall back to CPU")
+    if args.device == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("MPS unavailable; explicitly choose --device cpu")
     # The official YOLOE trainer initializes and fuses the text embedding once.
     # Box-only annotations require its detection architecture, not segmentation.
     name = args.worker_model
@@ -94,17 +95,18 @@ def train_one(args):
             raise RuntimeError("Automatic batch reduction would invalidate the common settings; rerun all models with a smaller batch")
 
     model.add_callback("on_train_batch_start", require_common_batch)
-    print(f"ultralytics={ultralytics.__version__}, torch={torch.__version__}, GPU={torch.cuda.get_device_name(0)}", flush=True)
+    device_name = "Apple GPU (MPS)" if args.device == "mps" else "CPU"
+    print(f"ultralytics={ultralytics.__version__}, torch={torch.__version__}, device={device_name}", flush=True)
     if args.resume:
-        model.train(resume=True, device=0, workers=args.workers, **extra)
+        model.train(resume=True, device=args.device, workers=args.workers, **extra)
         return
     model.train(
         data=str(args.data), project=str(args.output), name=name,
         epochs=args.epochs, patience=args.patience, imgsz=args.imgsz,
-        batch=args.batch, workers=args.workers, seed=args.seed, device=0,
+        batch=args.batch, workers=args.workers, seed=args.seed, device=args.device,
         optimizer="AdamW", lr0=0.001, lrf=0.01, deterministic=True,
         warmup_bias_lr=0.0, fraction=args.fraction,
-        amp=True, cache=False, plots=True, exist_ok=False, **extra,
+        amp=False, cache=False, plots=True, exist_ok=False, **extra,
     )
     # Keep test videos untouched until the final comparison.
 
@@ -118,8 +120,12 @@ def main():
     previous = None
     if args.resume:
         previous = json.loads(state_path.read_text())
-        old_cmd = Path(f"/proc/{previous['pid']}/cmdline")
-        if old_cmd.exists() and b"finetune_ball_models.py" in old_cmd.read_bytes():
+        import psutil
+        try:
+            old_cmd = psutil.Process(previous['pid']).cmdline()
+        except psutil.NoSuchProcess:
+            old_cmd = []
+        if any("finetune_ball_models.py" in part for part in old_cmd):
             raise RuntimeError("The original queue is still alive; stop it before resuming")
         for key, value in previous["config"].items():
             if key not in ("resume", "worker_model"):
@@ -144,15 +150,15 @@ def main():
             raise FileNotFoundError(weights_for(name))
     import torch
     import ultralytics
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA unavailable")
+    if args.device == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("MPS unavailable; explicitly choose --device cpu")
     args.output.mkdir(parents=True, exist_ok=args.resume)
     state = {
         "started_at": timestamp(), "status": "running", "pid": os.getpid(),
         "config": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items() if k not in ("worker_model", "resume")},
         "optimizer": "AdamW", "lr0": 0.001, "lrf": 0.01, "warmup_bias_lr": 0.0,
         "ultralytics": ultralytics.__version__, "torch": torch.__version__,
-        "gpu": torch.cuda.get_device_name(0),
+        "gpu": ("Apple GPU (MPS)" if args.device == "mps" else "CPU"),
         "data_sha256": hashlib.sha256(args.data.read_bytes()).hexdigest(),
         "notes": ["Sequential GPU training", "YOLOE detection fine-tuning with fused class embedding; no segmentation masks", "Test set not used for training or checkpoint selection"],
         "models": [{"name": n, "status": "pending", "source": str(weights_for(n)),
@@ -194,7 +200,7 @@ def main():
         print(f"{timestamp()} START {name}", flush=True)
         command = [sys.executable, "-u", str(Path(__file__).resolve()),
                    "--worker-model", name, "--data", str(args.data), "--output", str(args.output)]
-        for key in ("epochs", "patience", "batch", "imgsz", "workers", "seed", "fraction"):
+        for key in ("epochs", "patience", "batch", "imgsz", "workers", "seed", "fraction", "device"):
             command.extend(["--" + key, str(getattr(args, key))])
         if resume_model:
             command.append("--resume")

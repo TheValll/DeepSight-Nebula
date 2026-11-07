@@ -1,5 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include <iostream>
+#include <cmath>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -21,8 +23,7 @@ const string RIGHT_FRAME_PATH = "calibration/images/right";
 const int CHECKERBOARD_WIDTH = 8;   // inner corners
 const int CHECKERBOARD_HEIGHT = 5;  // inner corners
 const float SQUARE_SIZE = 0.025f;   // metres
-const string CAMERA_DEVICE =
-  "/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0";
+int camera_device = 0;
 const string OUTPUT_FILE = "calibration/stereo_calib.xml";
 const Size boardSize(CHECKERBOARD_WIDTH, CHECKERBOARD_HEIGHT);
 
@@ -33,6 +34,10 @@ void capture_frames();
 class CalibrationNode: public rclcpp::Node{
     public:
         CalibrationNode(): Node("calibration_node"){
+            camera_device = declare_parameter<int>("camera_device", 0);
+            if (camera_device < 0) {
+                throw std::invalid_argument("camera_device must be nonnegative");
+            }
             if (!create_folders()) {
                 return;
             }
@@ -156,16 +161,19 @@ void camera_stereo_calibration(){
 }
 
 void capture_frames(){
-    VideoCapture cap(CAMERA_DEVICE, CAP_V4L2);
-    
-    cap.set(CAP_PROP_FOURCC, VideoWriter::fourcc('M', 'J', 'P', 'G'));
+    VideoCapture cap(camera_device, CAP_AVFOUNDATION);
     cap.set(CAP_PROP_FRAME_WIDTH, 2560);
     cap.set(CAP_PROP_FRAME_HEIGHT, 720);
-    cap.set(CAP_PROP_FPS, 60);
+    cap.set(CAP_PROP_FPS, 30);
 
     if (!cap.isOpened()) {
         cerr << "Error : Impossible to open the camera" << endl;
         return;
+    }
+
+    if (lround(cap.get(CAP_PROP_FRAME_WIDTH)) != 2560 ||
+        lround(cap.get(CAP_PROP_FRAME_HEIGHT)) != 720) {
+        throw std::runtime_error("Stereo calibration requires a 2560x720 side-by-side stream");
     }
 
     namedWindow("Left", WINDOW_NORMAL);

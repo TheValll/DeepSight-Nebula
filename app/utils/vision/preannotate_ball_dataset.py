@@ -53,7 +53,7 @@ def main():
     parser.add_argument('--confidence', type=float, default=0.25)
     parser.add_argument('--review-confidence', type=float, default=0.50)
     parser.add_argument('--imgsz', type=int, default=1280)
-    parser.add_argument('--device', default='0')
+    parser.add_argument('--device', choices=('mps', 'cpu'), default='mps')
     args = parser.parse_args()
     if not 0 < args.confidence <= args.review_confidence <= 1:
         parser.error('Require 0 < confidence <= review-confidence <= 1')
@@ -66,8 +66,8 @@ def main():
     if len({p.stem for p in images}) != len(images):
         parser.error('Duplicate image stems would overwrite labels')
     model_path = args.model.resolve(strict=True)
-    if args.device != 'cpu' and not torch.cuda.is_available():
-        parser.error('CUDA unavailable; explicitly choose --device cpu if wanted')
+    if args.device == 'mps' and not torch.backends.mps.is_available():
+        parser.error('MPS unavailable; explicitly choose --device cpu if wanted')
     output = args.output_dir or (ROOT / 'datasets/ping_pong_ball/annotations' /
                                 datetime.now().strftime('yoloe26m_%Y%m%d_%H%M%S_%f'))
     output = output.resolve()

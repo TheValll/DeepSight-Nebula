@@ -32,7 +32,7 @@ def main():
             destination = output/f"{model}_{variant}"
             command = [sys.executable, str(HERE/"benchmark_yolo.py"), "--session", str(session),
                        "--model", model, "--variant", variant, "--confidence", "0.50",
-                       "--imgsz", "1280", "--eval-stride", "5", "--device", "cuda:0",
+                       "--imgsz", "1280", "--eval-stride", "5", "--device", "mps",
                        "--output-dir", str(destination)]
             print(f"START {len(runs)+1}/18 {model} {variant}", flush=True)
             with (output/f"{model}_{variant}.log").open("w") as log:

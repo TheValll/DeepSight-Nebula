@@ -6,7 +6,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -30,7 +30,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_lifecycle
 )
-target_link_libraries(${PROJECT_NAME} Boost::system)
+target_link_libraries(${PROJECT_NAME} Boost::headers)
 
 add_executable(servo_calibration_cli
   src/servo_calibration_cli.cpp
@@ -40,7 +40,7 @@ target_compile_features(servo_calibration_cli PUBLIC cxx_std_17)
 target_include_directories(servo_calibration_cli PRIVATE
   "${DRIVER_ROOT}/include"
 )
-target_link_libraries(servo_calibration_cli Boost::system)
+target_link_libraries(servo_calibration_cli Boost::headers)
 
 pluginlib_export_plugin_description_file(
   hardware_interface hiwonder_xarm_esp32_hardware.xml)

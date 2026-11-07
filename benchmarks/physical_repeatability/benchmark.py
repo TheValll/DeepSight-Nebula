@@ -47,9 +47,9 @@ def build_parser():
                         help=f'MoveIt velocity scaling (default: {defaults["velocity_scaling"]})')
     parser.add_argument('--acceleration', dest='acceleration_scaling', type=float,
                         help=f'MoveIt acceleration scaling (default: {defaults["acceleration_scaling"]})')
-    parser.add_argument('--robot-camera', help='onboard stereo V4L2 device, or "none" '
+    parser.add_argument('--robot-camera', help='onboard stereo AVFoundation camera index, or "none" '
                         f'(default: {defaults["robot_camera"]["device"]})')
-    parser.add_argument('--external-camera', help='external V4L2 device; must be the calibrated camera '
+    parser.add_argument('--external-camera', help='external AVFoundation camera index; must be the calibrated camera '
                         f'(default: {defaults["external_camera"]["device"]})')
     parser.add_argument('--tcp-calibration', help=f'marker8->TCP JSON (default: {defaults["tcp_calibration"]})')
     parser.add_argument('--calibration-validation', action='store_true',

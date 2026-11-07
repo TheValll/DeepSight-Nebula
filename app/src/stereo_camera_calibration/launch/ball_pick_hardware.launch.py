@@ -2,10 +2,12 @@
 
 Nothing moves until /pick_ball (or /approach_ball, /prepare_pick_trial) is called.
 """
+from glob import glob
+import os
 from pathlib import Path
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -15,11 +17,15 @@ from launch_ros.substitutions import FindPackageShare
 CALIBRATION = 'app/calibration/stereo_calib.xml'
 CORRECTION = 'app/calibration/camera_desk_correction.yaml'
 WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
-CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
-SERIAL = '/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0'
+CAMERA = '0'
+SERIAL_PORTS = sorted(glob('/dev/cu.usbserial*') + glob('/dev/cu.usbmodem*'))
+SERIAL = SERIAL_PORTS[0] if len(SERIAL_PORTS) == 1 else ''
 
 
 def generate_launch_description():
+    openmp_path = str(
+        Path(os.environ.get('HOMEBREW_PREFIX', '/opt/homebrew')) / 'opt/libomp/lib')
+    library_path = ':'.join(filter(None, [openmp_path, os.environ.get('DYLD_LIBRARY_PATH')]))
     # Works from the source file and from a colcon-installed copy in this repo.
     root = next(parent for parent in Path(__file__).resolve().parents
                 if (parent / CALIBRATION).is_file())
@@ -29,6 +35,11 @@ def generate_launch_description():
         [FindPackageShare('hiwonder_xarm_esp32_moveit_config'), 'launch', 'hardware.launch.py'])
 
     return LaunchDescription([
+        SetEnvironmentVariable(
+            'FASTDDS_BUILTIN_TRANSPORTS',
+            os.environ.get('FASTDDS_BUILTIN_TRANSPORTS')
+            or 'LARGE_DATA?max_msg_size=4MB&sockets_size=4MB'),
+        SetEnvironmentVariable('DYLD_LIBRARY_PATH', library_path),
         DeclareLaunchArgument('serial_port', default_value=SERIAL),
         DeclareLaunchArgument('use_rviz', default_value='true'),
         DeclareLaunchArgument('camera_device', default_value=CAMERA),

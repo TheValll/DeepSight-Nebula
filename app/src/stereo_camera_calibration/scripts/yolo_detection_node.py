@@ -2,6 +2,7 @@
 
 import os
 import time
+import torch
 
 import cv2
 import message_filters
@@ -29,7 +30,13 @@ class YoloDetectionNode(Node):
             raise ValueError("ROS parameter 'model' must name a weights file")
         self.confidence = self.required("confidence", Parameter.Type.DOUBLE)
         self.image_size = self.required("imgsz", Parameter.Type.INTEGER)
-        self.device = str(self.declare_parameter("device", "0").value)
+        self.device = str(self.declare_parameter("device", "auto").value)
+        if self.device == "auto":
+            self.device = "mps" if torch.backends.mps.is_available() else "cpu"
+        if self.device not in ("mps", "cpu"):
+            raise ValueError("device must be auto, mps or cpu")
+        if self.device == "mps" and not torch.backends.mps.is_available():
+            raise RuntimeError("MPS is unavailable; choose device:=cpu explicitly")
         self.classes = list(self.required("classes", Parameter.Type.INTEGER_ARRAY))
         self.prompt = self.required("prompt", Parameter.Type.STRING)
         self.minimum_depth = self.required("minimum_depth", Parameter.Type.DOUBLE)
@@ -107,7 +114,7 @@ class YoloDetectionNode(Node):
             raise ValueError(f"Classes {unknown} not in model classes {names}")
         target = self.prompt or {c: names[c] for c in self.classes} or "all"
         self.get_logger().info(
-            f"Loaded {resolved_model_path} on CUDA device {self.device}; "
+            f"Loaded {resolved_model_path} on {self.device}; "
             f"target: {target}; "
             f"imgsz: {self.image_size}; waiting for stereo topics"
         )
@@ -143,8 +150,12 @@ class YoloDetectionNode(Node):
         }
         if not self.prompt:
             predict_options["classes"] = self.classes or None
+        if self.device == "mps":
+            torch.mps.synchronize()
         inference_start = time.perf_counter()
         result = self.model.predict(**predict_options)[0]
+        if self.device == "mps":
+            torch.mps.synchronize()
         inference_end = time.perf_counter()
         publish_annotated = (
             self.publish_annotated_image
@@ -332,7 +343,7 @@ class YoloDetectionNode(Node):
         status.level = DiagnosticStatus.OK
         status.name = "yolo"
         status.message = "frame timings"
-        status.hardware_id = "cuda"
+        status.hardware_id = self.device
         status.values = [
             KeyValue(key=name, value=f"{value:.6f}")
             for name, value in metrics.items()

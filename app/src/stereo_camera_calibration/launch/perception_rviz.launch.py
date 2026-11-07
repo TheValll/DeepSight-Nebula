@@ -4,10 +4,11 @@ fine-tuned YOLO detections, the passive ball goal and RViz.
 The arm pose comes from joint_state_publisher_gui, so the base_link goal is
 only meaningful when the sliders match the physical arm.
 """
+import os
 from pathlib import Path
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -16,10 +17,13 @@ from launch_ros.substitutions import FindPackageShare
 CALIBRATION = 'app/calibration/stereo_calib.xml'
 CORRECTION = 'app/calibration/camera_desk_correction.yaml'
 WEIGHTS = 'benchmarks/finetuning/ping_pong_20261010/yolo26n/weights/best.pt'
-CAMERA = '/dev/v4l/by-id/usb-3D_USB_Camera_3D_USB_Camera_01.00.00-video-index0'
+CAMERA = '0'
 
 
 def generate_launch_description():
+    openmp_path = str(
+        Path(os.environ.get('HOMEBREW_PREFIX', '/opt/homebrew')) / 'opt/libomp/lib')
+    library_path = ':'.join(filter(None, [openmp_path, os.environ.get('DYLD_LIBRARY_PATH')]))
     # Works from the source file and from a colcon-installed copy in this repo.
     root = next(parent for parent in Path(__file__).resolve().parents
                 if (parent / CALIBRATION).is_file())
@@ -31,6 +35,11 @@ def generate_launch_description():
         [FindPackageShare('stereo_camera_calibration'), 'rviz', 'perception.rviz'])
 
     return LaunchDescription([
+        SetEnvironmentVariable(
+            'FASTDDS_BUILTIN_TRANSPORTS',
+            os.environ.get('FASTDDS_BUILTIN_TRANSPORTS')
+            or 'LARGE_DATA?max_msg_size=4MB&sockets_size=4MB'),
+        SetEnvironmentVariable('DYLD_LIBRARY_PATH', library_path),
         DeclareLaunchArgument('camera_device', default_value=CAMERA),
         DeclareLaunchArgument('calibration_file', default_value=str(root / CALIBRATION)),
         DeclareLaunchArgument('model', default_value=str(root / WEIGHTS)),

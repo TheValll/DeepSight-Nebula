@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -12,14 +13,28 @@
 
 namespace {
 
-constexpr const char * kDefaultPort = "/dev/ttyUSB0";
+std::string default_serial_port()
+{
+  std::string selected;
+  std::error_code error;
+  for (const auto & entry : std::filesystem::directory_iterator("/dev", error)) {
+    const auto name = entry.path().filename().string();
+    if (name.rfind("cu.usbserial", 0) == 0 || name.rfind("cu.usbmodem", 0) == 0) {
+      if (!selected.empty()) {
+        return "";
+      }
+      selected = entry.path().string();
+    }
+  }
+  return selected;
+}
 constexpr int kDefaultBaudrate = 115200;
 constexpr int kDefaultReadCount = 1;
 constexpr int kDefaultIntervalMs = 250;
 
 struct Options {
   std::string command;
-  std::string port{kDefaultPort};
+  std::string port{default_serial_port()};
   int baudrate{kDefaultBaudrate};
   int id{0};
   int count{kDefaultReadCount};
@@ -134,6 +149,11 @@ bool parse_options(int argc, char ** argv, Options & options, std::string & erro
       error = "unknown option " + argument;
       return false;
     }
+  }
+
+  if (options.port.empty()) {
+    error = "No unambiguous USB serial adapter; specify --port /dev/cu.usbserial-...";
+    return false;
   }
 
   if (options.id < 1 || options.id > 254) {

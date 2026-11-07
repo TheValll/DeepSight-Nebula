@@ -3,5 +3,11 @@ from moveit_configs_utils.launches import generate_static_virtual_joint_tfs_laun
 
 
 def generate_launch_description():
-    moveit_config = MoveItConfigsBuilder("hiwonder_esp32", package_name="hiwonder_xarm_esp32_moveit_config").to_moveit_configs()
+    moveit_config = (
+        MoveItConfigsBuilder(
+            "hiwonder_esp32", package_name="hiwonder_xarm_esp32_moveit_config"
+        )
+        .planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl")
+        .to_moveit_configs()
+    )
     return generate_static_virtual_joint_tfs_launch(moveit_config)
